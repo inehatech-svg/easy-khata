@@ -1,0 +1,10 @@
+{
+  "name": "solar-khata",
+  "version": "1.0.0",
+  "description": "Offline-first khata, inventory & billing PWA for solar and inverter businesses",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "deploy": "firebase deploy"
+  }
+}

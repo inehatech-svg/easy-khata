@@ -1,0 +1,241 @@
+/* Smart login: password + PIN + biometric (WebAuthn) quick unlock */
+const Auth = {
+  user: null,
+
+  async sha(str, salt) {
+    const data = new TextEncoder().encode(salt + '::' + str);
+    if (window.crypto && crypto.subtle && crypto.subtle.digest) {
+      try {
+        const buf = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) { /* fall through */ }
+    }
+    let h1 = 0xdeadbeef ^ salt.length, h2 = 0x41c6ce57 ^ salt.length;
+    for (let i = 0; i < data.length; i++) {
+      const ch = data[i];
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (h2 >>> 0).toString(16) + (h1 >>> 0).toString(16);
+  },
+
+  async users() { return DB.all('users'); },
+
+  saveSession(u) {
+    Auth.user = u;
+    localStorage.setItem('sk_sess', u.id);
+    localStorage.removeItem('sk_locked');
+  },
+
+  async restoreSession() {
+    const uid = localStorage.getItem('sk_sess');
+    if (!uid) return null;
+    const u = await DB.get('users', uid);
+    if (!u) { localStorage.removeItem('sk_sess'); return null; }
+    Auth.user = u;
+    return u;
+  },
+
+  logout() {
+    Auth.user = null;
+    localStorage.removeItem('sk_sess');
+    GDrive.token = null;
+    localStorage.removeItem('sk_token');
+    App.showAuth();
+  },
+
+  /* ---------- rendering ---------- */
+  async renderAuth(msg) {
+    App.viewMode('auth');
+    const users = await Auth.users();
+    const el = U.q('#authView');
+    if (users.length === 0) el.innerHTML = Auth.setupHtml(msg);
+    else {
+      Auth.user = users.find(x => x.id === localStorage.getItem('sk_sess')) || users[0];
+      el.innerHTML = Auth.loginHtml(Auth.user, msg);
+      Auth.buildPinPad();
+    }
+  },
+
+  logoBlock(sub) {
+    return '<div class="auth-logo">' + UI.icon('zap', 42) + '</div>' +
+      '<div class="auth-title">Solar Khata</div>' +
+      '<div class="auth-sub">' + sub + '</div>';
+  },
+
+  setupHtml(msg) {
+    return '<div class="auth-wrap">' + Auth.logoBlock('Create your owner account to get started') +
+      '<div class="auth-card">' +
+      (msg ? '<div class="alert-card" style="margin:0 0 12px"><span class="small">' + U.esc(msg) + '</span></div>' : '') +
+      '<div class="field"><label>Shop / Business name</label><input id="su_shop" placeholder="e.g. Ali Solar Traders" autocomplete="off"></div>' +
+      '<div class="field"><label>Username</label><input id="su_user" placeholder="owner" autocomplete="off"></div>' +
+      '<div class="field"><label>Password</label><input id="su_pass" type="password" placeholder="Choose a strong password"></div>' +
+      '<div class="field"><label>Confirm password</label><input id="su_pass2" type="password" placeholder="Repeat password"></div>' +
+      '<div class="field"><label>Quick PIN <span class="muted tiny">(optional — 4 to 6 digits)</span></label><input id="su_pin" inputmode="numeric" maxlength="6" placeholder="e.g. 4821"></div>' +
+      '<button class="btn btn-pri btn-block" onclick="Auth.doSetup()">' + UI.icon('shield', 18) + ' Create account</button>' +
+      '</div><div class="auth-foot">Data is stored offline on this device. Set up Google Drive backup later from Settings.</div></div>';
+  },
+
+  loginHtml(user, msg) {
+    const hasPin = !!user.pinHash;
+    const canBio = Auth.canBiometric();
+    return '<div class="auth-wrap">' + Auth.logoBlock('Welcome back') +
+      '<div class="auth-card">' +
+      (msg ? '<div class="alert-card" style="margin:0 0 12px"><span class="small">' + U.esc(msg) + '</span></div>' : '') +
+      '<div class="segmented" style="margin-bottom:14px">' +
+      '<button id="lg_t_pass" class="' + (hasPin ? '' : 'on') + '" onclick="Auth.loginTab(\'pass\')">Password</button>' +
+      (hasPin ? '<button id="lg_t_pin" class="on" onclick="Auth.loginTab(\'pin\')">PIN</button>' : '') +
+      '</div>' +
+      '<div id="lg_pass" ' + (hasPin ? 'hidden' : '') + '>' +
+      '<div class="field"><label>Username</label><input id="lg_user" value="' + U.esc(user.username) + '" readonly></div>' +
+      '<div class="field"><label>Password</label><input id="lg_pass" type="password" placeholder="Enter password"></div>' +
+      '<button class="btn btn-pri btn-block" onclick="Auth.doLogin()">' + UI.icon('lock', 18) + ' Unlock</button>' +
+      '</div>' +
+      '<div id="lg_pin" ' + (hasPin ? '' : 'hidden') + '>' +
+      '<input id="lg_pinv" inputmode="numeric" maxlength="6" placeholder="Enter PIN" style="position:absolute;opacity:0;pointer-events:none">' +
+      '<div class="pin-dots" id="pinDots">' + '<span></span>'.repeat(6) + '</div>' +
+      '<div class="num-pad" id="pinPad"></div>' +
+      '</div>' +
+      (canBio ? '<button class="btn btn-block mt10" onclick="Auth.bioUnlock()">' + UI.icon('finger', 18) + ' Unlock with fingerprint</button>' : '') +
+      '</div><div class="auth-foot">Solar Khata v1.0 • Offline-first</div></div>';
+  },
+
+  loginTab(which) {
+    U.q('#lg_pass').hidden = which !== 'pass';
+    const pin = U.q('#lg_pin'); if (pin) pin.hidden = which !== 'pin';
+    U.q('#lg_t_pass').classList.toggle('on', which === 'pass');
+    const t = U.q('#lg_t_pin'); if (t) t.classList.toggle('on', which === 'pin');
+    if (which === 'pin') Auth.pinInput('');
+  },
+
+  pinInput(val) {
+    const hidden = U.q('#lg_pinv'); if (!hidden) return;
+    hidden.value = val;
+    const dots = U.qa('#pinDots span');
+    dots.forEach((d, i) => d.classList.toggle('fill', i < val.length));
+    const want = Auth.user && Auth.user.pinLen ? Auth.user.pinLen : 4;
+    if (val.length === want) Auth.doPin(val);
+  },
+
+  buildPinPad() {
+    const pad = U.q('#pinPad'); if (!pad) return;
+    let html = '';
+    for (let i = 1; i <= 9; i++) html += '<button onclick="Auth.pinInput((U.q(\'#lg_pinv\').value+\'' + i + '\').slice(0,6))">' + i + '</button>';
+    html += '<button style="visibility:hidden"></button><button onclick="Auth.pinInput((U.q(\'#lg_pinv\').value+\'0\').slice(0,6))">0</button>' +
+      '<button onclick="Auth.pinInput(U.q(\'#lg_pinv\').value.slice(0,-1))">' + UI.icon('back', 18) + '</button>';
+    pad.innerHTML = html;
+    const hidden = U.q('#lg_pinv');
+    hidden.addEventListener('input', () => Auth.pinInput(hidden.value.replace(/\D/g, '').slice(0, 6)));
+  },
+
+  shake() {
+    const card = U.q('#authView .auth-card');
+    if (card) { card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 350); }
+  },
+
+  /* ---------- actions ---------- */
+  async doSetup() {
+    const shop = U.q('#su_shop').value.trim();
+    const username = U.q('#su_user').value.trim();
+    const pass = U.q('#su_pass').value;
+    const pass2 = U.q('#su_pass2').value;
+    const pin = U.q('#su_pin').value.replace(/\D/g, '');
+    if (!username || !pass) return UI.toast('Username and password are required', 'err');
+    if (pass.length < 4) return UI.toast('Password must be at least 4 characters', 'err');
+    if (pass !== pass2) return UI.toast('Passwords do not match', 'err');
+    if (pin && (pin.length < 4 || pin.length > 6)) return UI.toast('PIN must be 4–6 digits', 'err');
+    const salt = U.uid();
+    const u = {
+      id: U.uid(), username, salt,
+      hash: await Auth.sha(pass, salt), createdAt: U.nowISO(), pinLen: pin ? pin.length : 0
+    };
+    if (pin) { u.pinSalt = U.uid(); u.pinHash = await Auth.sha(pin, u.pinSalt); }
+    await DB.put('users', u);
+    App.s.shopName = shop || 'My Solar Shop';
+    await App.saveSettings();
+    Auth.saveSession(u);
+    UI.toast('Welcome to Solar Khata!', 'ok');
+    App.showMain();
+  },
+
+  async doLogin() {
+    const pass = U.q('#lg_pass').value;
+    const u = Auth.user;
+    const hash = await Auth.sha(pass, u.salt);
+    if (hash !== u.hash) { Auth.shake(); return UI.toast('Wrong password', 'err'); }
+    Auth.saveSession(u);
+    App.showMain();
+  },
+
+  async doPin(pin) {
+    const u = Auth.user;
+    if (!u || !u.pinHash) return;
+    const hash = await Auth.sha(pin, u.pinSalt);
+    if (hash !== u.pinHash) { Auth.shake(); Auth.pinInput(''); return UI.toast('Wrong PIN', 'err'); }
+    Auth.saveSession(u);
+    App.showMain();
+  },
+
+  async changePassword(oldP, newP) {
+    const u = Auth.user;
+    const h = await Auth.sha(oldP, u.salt);
+    if (h !== u.hash) return false;
+    u.hash = await Auth.sha(newP, u.salt);
+    await DB.put('users', u);
+    return true;
+  },
+
+  async setPin(pin) {
+    const u = Auth.user;
+    if (pin) { u.pinSalt = U.uid(); u.pinHash = await Auth.sha(pin, u.pinSalt); u.pinLen = pin.length; }
+    else { delete u.pinHash; delete u.pinSalt; delete u.pinLen; }
+    await DB.put('users', u);
+  },
+
+  /* ---------- biometric (WebAuthn platform authenticator) ---------- */
+  bioCapable() { return !!window.PublicKeyCredential; },
+  bioEnrolled() { return !!(Auth.user && localStorage.getItem('sk_bio_' + Auth.user.id)); },
+  canBiometric() { return Auth.bioCapable() && Auth.bioEnrolled() && location.protocol !== 'file:'; },
+
+  async enrollBio() {
+    try {
+      const u = Auth.user;
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: 'Solar Khata', id: location.hostname },
+          user: { id: U.u8b64(btoa(u.id)), name: u.username, displayName: u.username },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'preferred' },
+          timeout: 60000
+        }
+      });
+      localStorage.setItem('sk_bio_' + u.id, U.b64u8(cred.rawId));
+      UI.toast('Quick unlock enabled', 'ok');
+      return true;
+    } catch (e) {
+      UI.toast('Could not enable fingerprint: ' + (e.message || e), 'err');
+      return false;
+    }
+  },
+
+  async bioUnlock() {
+    try {
+      const u = Auth.user;
+      const rawId = localStorage.getItem('sk_bio_' + u.id);
+      await navigator.credentials.get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [{ type: 'public-key', id: U.u8b64(rawId) }],
+          userVerification: 'preferred', timeout: 60000
+        }
+      });
+      Auth.saveSession(u);
+      App.showMain();
+    } catch (e) {
+      UI.toast('Fingerprint unlock failed — use password', 'err');
+    }
+  }
+};
