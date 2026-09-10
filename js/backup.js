@@ -5,7 +5,7 @@ const Backup = {
     const out = {};
     for (const s of stores) out[s] = await DB.all(s);
     return {
-      app: 'solar-khata', version: 1,
+      app: 'easy-khata', version: 1,
       exportedAt: U.nowISO(), deviceId: Backup.deviceId(),
       shopName: App.s.shopName, data: out
     };
@@ -21,7 +21,7 @@ const Backup = {
     try {
       const payload = await Backup.collect();
       const day = U.day();
-      const name = 'solar-khata-backup-' + day + '-' + U.nowISO().slice(11, 16).replace(':', '') + '.json';
+      const name = 'easy-khata-backup-' + day + '-' + U.nowISO().slice(11, 16).replace(':', '') + '.json';
       U.download(name, JSON.stringify(payload));
       App.s.lastBackupAt = U.nowISO();
       await App.saveSettings();
@@ -42,7 +42,7 @@ const Backup = {
       r.onload = () => {
         try {
           const data = JSON.parse(r.result);
-          if (data.app !== 'solar-khata' || !data.data) throw new Error('Not a Solar Khata backup file');
+          if ((data.app !== 'easy-khata' && data.app !== 'solar-khata') || !data.data) throw new Error('Not an Easy Khata backup file');
           Backup.askMode(data, f.name);
         } catch (e) {
           UI.toast('Invalid backup file: ' + (e.message || e), 'err');
@@ -185,7 +185,7 @@ const Backup = {
     try {
       const payload = JSON.stringify(await Backup.collect());
       const boundary = 'sk' + U.uid();
-      const meta = JSON.stringify({ name: 'solar-khata-' + U.day() + '.json', parents: ['appDataFolder'] });
+      const meta = JSON.stringify({ name: 'easy-khata-' + U.day() + '.json', parents: ['appDataFolder'] });
       const body =
         '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta + '\r\n' +
         '--' + boundary + '\r\nContent-Type: application/json\r\n\r\n' + payload + '\r\n--' + boundary + '--';
@@ -240,11 +240,38 @@ const Backup = {
       });
       const text = await res.text();
       const data = JSON.parse(text);
-      if (data.app !== 'solar-khata') throw new Error('Not a Solar Khata backup');
+      if (data.app !== 'easy-khata' && data.app !== 'solar-khata') throw new Error('Not an Easy Khata backup');
       U.q('.sheet-overlay') && U.q('.sheet-overlay').remove();
       Backup.askMode(data, data.exportedAt ? 'Drive backup ' + U.fmtDateTime(data.exportedAt) : 'Drive backup');
     } catch (e) {
       UI.toast('Restore failed: ' + (e.message || e), 'err');
+    }
+  },
+
+  // pulls the newest Drive backup and merges it (newest record wins) — used by Google login
+  async syncFromDrive(silent) {
+    if (!Backup.driveValid()) return false;
+    try {
+      const res = await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&orderBy=modifiedTime desc&pageSize=1&fields=files(id,name,modifiedTime)', {
+        headers: { Authorization: 'Bearer ' + GDrive.token }
+      });
+      const j = await res.json();
+      const f = (j.files || [])[0];
+      if (!f) { if (!silent) UI.toast('No cloud backup yet — this device is the first', ''); return false; }
+      const dl = await fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media', {
+        headers: { Authorization: 'Bearer ' + GDrive.token }
+      });
+      const data = JSON.parse(await dl.text());
+      if (data.app !== 'easy-khata' && data.app !== 'solar-khata') throw new Error('bad backup');
+      await Backup.apply(data, 'merge');
+      App.s.lastDriveBackup = U.nowISO();
+      await App.saveSettings();
+      if (!silent) UI.toast('Synced from Google Drive ✓', 'ok');
+      await App.rerender();
+      return true;
+    } catch (e) {
+      if (!silent) UI.toast('Sync failed: ' + (e.message || e), 'err');
+      return false;
     }
   },
 

@@ -61,8 +61,71 @@ const Auth = {
 
   logoBlock(sub) {
     return '<div class="auth-logo">' + UI.icon('zap', 42) + '</div>' +
-      '<div class="auth-title">Solar Khata</div>' +
+      '<div class="auth-title">Easy Khata</div>' +
       '<div class="auth-sub">' + sub + '</div>';
+  },
+
+  gLogo() {
+    return '<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.1 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
+  },
+
+  googleReady() {
+    return !!(window.EK_GOOGLE_CLIENT_ID || (App.s && App.s.driveClient));
+  },
+
+  googleBtnHtml(label) {
+    if (!Auth.googleReady() || location.protocol === 'file:') return '';
+    return '<button class="btn g-btn btn-block mt10" onclick="Auth.googleLogin()">' + Auth.gLogo() + ' ' + (label || 'Continue with Google') + '</button>' +
+      '<div class="hint" style="text-align:center;margin-top:8px">Google login also keeps your data auto-backed-up & synced</div>';
+  },
+
+  async googleLogin() {
+    const cid = String(window.EK_GOOGLE_CLIENT_ID || App.s.driveClient || '').trim();
+    if (!cid) return UI.toast('Google Client ID not configured', 'err');
+    try {
+      await Backup.gisLoad();
+      UI.toast('Opening Google sign-in…');
+      const resp = await new Promise((resolve, reject) => {
+        let settled = false;
+        const tc = google.accounts.oauth2.initTokenClient({
+          client_id: cid,
+          scope: 'https://www.googleapis.com/auth/drive.appdata',
+          callback: (r) => { if (!settled) { settled = true; resolve(r); } },
+          error_callback: (e) => { if (!settled) { settled = true; reject(new Error(e && e.message || e.type || 'popup closed')); } }
+        });
+        tc.requestAccessToken({ prompt: '' });
+      });
+      if (resp.error) throw new Error(resp.error);
+      GDrive.token = resp.access_token;
+      GDrive.expiry = Date.now() + ((resp.expires_in || 3600) - 60) * 1000;
+      localStorage.setItem('sk_token', JSON.stringify({ token: GDrive.token, expiry: GDrive.expiry, clientId: cid }));
+      App.s.driveClient = cid;
+      App.s.driveAuto = true;
+      await App.saveSettings();
+
+      const ab = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + GDrive.token } });
+      const aj = await ab.json();
+      const email = aj.user && aj.user.emailAddress;
+      if (!email) throw new Error('Google account not identified');
+
+      const users = await DB.all('users');
+      let u = users.find(x => (x.googleEmail || '').toLowerCase() === email.toLowerCase());
+      if (!u) {
+        const shop = App.s.shopName && App.s.shopName !== 'My Solar Shop' ? App.s.shopName : 'My Shop';
+        u = { id: U.uid(), username: email.split('@')[0], googleEmail: email, salt: U.uid(), hash: await Auth.sha(U.uid() + U.uid(), U.uid()), createdAt: U.nowISO() };
+        await DB.put('users', u);
+        if (users.length === 0) { App.s.shopName = shop; await App.saveSettings(); }
+        UI.toast('Account created for ' + email, 'ok');
+      }
+      Auth.saveSession(u);
+      App.showMain();
+      UI.toast('Signed in with Google — ' + email, 'ok');
+      // auto-backup this device, then pull & merge the newest cloud copy
+      await Backup.driveBackup(true);
+      await Backup.syncFromDrive(true);
+    } catch (e) {
+      UI.toast('Google sign-in failed: ' + (e.message || e), 'err');
+    }
   },
 
   setupHtml(msg) {
@@ -75,7 +138,8 @@ const Auth = {
       '<div class="field"><label>Confirm password</label><input id="su_pass2" type="password" placeholder="Repeat password"></div>' +
       '<div class="field"><label>Quick PIN <span class="muted tiny">(optional — 4 to 6 digits)</span></label><input id="su_pin" inputmode="numeric" maxlength="6" placeholder="e.g. 4821"></div>' +
       '<button class="btn btn-pri btn-block" onclick="Auth.doSetup()">' + UI.icon('shield', 18) + ' Create account</button>' +
-      '</div><div class="auth-foot">Data is stored offline on this device. Set up Google Drive backup later from Settings.</div></div>';
+      Auth.googleBtnHtml('Sign up with Google') +
+      '</div><div class="auth-foot">Data is stored offline on this device. Google login adds automatic cloud backup.</div></div>';
   },
 
   loginHtml(user, msg) {
@@ -99,7 +163,8 @@ const Auth = {
       '<div class="num-pad" id="pinPad"></div>' +
       '</div>' +
       (canBio ? '<button class="btn btn-block mt10" onclick="Auth.bioUnlock()">' + UI.icon('finger', 18) + ' Unlock with fingerprint</button>' : '') +
-      '</div><div class="auth-foot">Solar Khata v1.0 • Offline-first</div></div>';
+      Auth.googleBtnHtml() +
+      '</div><div class="auth-foot">Easy Khata v1.1 • Offline-first</div></div>';
   },
 
   loginTab(which) {
@@ -153,10 +218,10 @@ const Auth = {
     };
     if (pin) { u.pinSalt = U.uid(); u.pinHash = await Auth.sha(pin, u.pinSalt); }
     await DB.put('users', u);
-    App.s.shopName = shop || 'My Solar Shop';
+    App.s.shopName = shop || 'My Shop';
     await App.saveSettings();
     Auth.saveSession(u);
-    UI.toast('Welcome to Solar Khata!', 'ok');
+    UI.toast('Welcome to Easy Khata!', 'ok');
     App.showMain();
   },
 
@@ -205,7 +270,7 @@ const Auth = {
       const cred = await navigator.credentials.create({
         publicKey: {
           challenge: crypto.getRandomValues(new Uint8Array(32)),
-          rp: { name: 'Solar Khata', id: location.hostname },
+          rp: { name: 'Easy Khata', id: location.hostname },
           user: { id: U.u8b64(btoa(u.id)), name: u.username, displayName: u.username },
           pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
           authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'preferred' },

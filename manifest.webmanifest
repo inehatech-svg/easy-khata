@@ -1,6 +1,6 @@
 {
-  "name": "Solar Khata — Advance Ledger",
-  "short_name": "Solar Khata",
+  "name": "Easy Khata — Advance Ledger",
+  "short_name": "Easy Khata",
   "description": "Offline-first khata, inventory & billing for solar and inverter businesses",
   "start_url": "./",
   "scope": "./",

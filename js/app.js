@@ -8,7 +8,7 @@ const App = {
   defaults() {
     return {
       key: 'app', updatedAt: U.nowISO(),
-      shopName: 'My Solar Shop', shopPhone: '', shopAddress: '',
+      shopName: 'My Shop', shopPhone: '', shopAddress: '',
       currency: '\u20A8', theme: 'light',
       lowStockDefault: 5, autoAdvance: true,
       autoLockMin: 0, notify: false,
@@ -146,12 +146,29 @@ const App = {
 
   renderTabbar(active) {
     const on = App.tabOf(active);
-    const el = U.q('#tabbar');
-    el.innerHTML = App.tabs.map(t =>
+    // mobile bottom tab bar
+    U.q('#tabbar').innerHTML = App.tabs.map(t =>
       '<button class="tab ' + (on === t[0] ? 'on' : '') + '" onclick="U.vibrate();App.nav(\'' + t[0] + '\')">' +
       UI.icon(t[1], 21) + '<span>' + t[2] + '</span>' +
       (t[0] === 'stock' ? '<span class="t-badge" id="tabStockBadge" hidden></span>' : '') +
       '</button>').join('');
+    // desktop top navbar
+    const nav = U.q('#dnav');
+    if (nav) {
+      const labels = { home: 'Home', khata: 'Khata', stock: 'Stock', bills: 'Bills', settings: 'More' };
+      nav.innerHTML =
+        '<div class="d-brand"><span class="d-logo">' + UI.icon('zap', 18) + '</span>Easy Khata' +
+        '<span class="d-shop">' + U.esc(App.s.shopName || '') + '</span></div>' +
+        '<div class="d-links">' + App.tabs.map(t =>
+          '<button class="d-link ' + (on === t[0] ? 'on' : '') + '" onclick="App.nav(\'' + t[0] + '\')">' +
+          UI.icon(t[1], 16) + labels[t[0]] +
+          (t[0] === 'stock' ? ' <span class="d-badge" id="dnavStockBadge" hidden></span>' : '') +
+          '</button>').join('') + '</div>' +
+        '<div class="d-actions">' +
+        '<button class="ph-btn" style="color:var(--muted);border-color:var(--line);background:var(--field)" onclick="App.toggleTheme()" title="Theme">' + UI.icon(App.s.theme === 'dark' ? 'sun' : 'moon', 17) + '</button>' +
+        '<button class="ph-btn" style="color:var(--muted);border-color:var(--line);background:var(--field)" onclick="App.lock()" title="Lock">' + UI.icon('lock', 17) + '</button>' +
+        '</div>';
+    }
   },
 
   updateFab(route) {
@@ -173,11 +190,11 @@ const App = {
   async updateBadges() {
     try {
       const low = await Stock.lowItems();
+      const count = low.length > 99 ? '99+' : low.length;
       const badge = U.q('#tabStockBadge');
-      if (badge) {
-        badge.hidden = low.length === 0;
-        badge.textContent = low.length > 99 ? '99+' : low.length;
-      }
+      if (badge) { badge.hidden = low.length === 0; badge.textContent = count; }
+      const dbadge = U.q('#dnavStockBadge');
+      if (dbadge) { dbadge.hidden = low.length === 0; dbadge.textContent = count; }
     } catch (e) { /* db not ready */ }
   },
 

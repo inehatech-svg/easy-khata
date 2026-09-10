@@ -1,6 +1,17 @@
-# Solar Khata ⚡ — Advance Ledger System
+# Easy Khata ⚡ — Advance Ledger System
 
 An offline-first, installable mobile app (PWA) for solar & inverter businesses: daily khata, per-person advance accounts, inventory with smart low-stock alarms, invoicing with auto advance deduction, returns, discounts and Google Drive backup/sync.
+
+Previously named "Solar Khata" — old backups still import fine.
+
+## Google login (Gmail) setup
+
+"Continue with Google" gives one-tap login, automatic Drive backup after every sign-in, and merge-sync from the cloud. It needs your OAuth Client ID:
+
+1. Google Cloud Console → **Credentials → Create credentials → OAuth client ID → Web application**
+2. Enable **Google Drive API** in the project, add yourself as a test user on the OAuth consent screen
+3. Add your origins under **Authorized JavaScript origins**: `http://localhost:8123`, `https://YOUR-PROJECT.web.app` (and any custom domain)
+4. Paste the Client ID into **js/config.js** (`EK_GOOGLE_CLIENT_ID`) or into Settings → Backup & global sync
 
 ## Run it
 
@@ -50,7 +61,7 @@ Sync across devices: enable *Daily auto-backup* on the main phone; on other devi
 ## For staff / developers
 
 ```bash
-git clone https://github.com/inehatech-svg/solar-khata.git
+git clone https://github.com/inehatech-svg/easy-khata.git
 cd solar-khata
 npm start          # runs the app at http://localhost:8123  (needs Node.js)
 ```

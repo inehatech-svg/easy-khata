@@ -39,7 +39,8 @@ const SettingsPage = {
 
       '<div class="section-label">Security — smart login</div>' +
       '<div class="card">' +
-      '<div class="srow" onclick="SettingsPage.changePass()"><span class="s-ic i-pri">' + UI.icon('key', 17) + '</span><div class="s-main"><div class="s-t">Change password</div><div class="s-d">Signed in as ' + U.esc(u.username) + '</div></div>' + UI.icon('chevR', 16) + '</div>' +
+      (Auth.googleReady() && location.protocol !== 'file:' ? '<div class="srow" onclick="Auth.googleLogin()"><span class="s-ic i-blue">' + Auth.gLogo() + '</span><div class="s-main"><div class="s-t">Sign in with Google</div><div class="s-d">' + (Auth.user.googleEmail ? 'Signed in as ' + U.esc(Auth.user.googleEmail) : 'Link this Gmail — auto backup & sync') + '</div></div>' + UI.icon('chevR', 16) + '</div>' : '') +
+      '<div class="srow" onclick="SettingsPage.changePass()"><span class="s-ic i-pri">' + UI.icon('key', 17) + '</span><div class="s-main"><div class="s-t">Change password</div><div class="s-d">Signed in as ' + U.esc(u.username) + (u.googleEmail ? ' (Google)' : '') + '</div></div>' + UI.icon('chevR', 16) + '</div>' +
       '<div class="srow" onclick="SettingsPage.setPin()"><span class="s-ic i-green">' + UI.icon('lock', 17) + '</span><div class="s-main"><div class="s-t">' + (u.pinHash ? 'Change / remove PIN' : 'Set quick PIN') + '</div><div class="s-d">' + (u.pinHash ? 'PIN unlock is on' : '4–6 digit fast unlock') + '</div></div>' + UI.icon('chevR', 16) + '</div>' +
       (Auth.bioCapable() && location.protocol !== 'file:' ?
         '<div class="srow" onclick="Auth.enrollBio()"><span class="s-ic i-amber">' + UI.icon('finger', 17) + '</span><div class="s-main"><div class="s-t">Fingerprint quick unlock</div><div class="s-d">' + (Auth.bioEnrolled() ? 'Enrolled ✓ — tap to re-enroll' : 'Use device biometrics') + '</div></div>' + UI.icon('chevR', 16) + '</div>' : '') +
@@ -87,14 +88,14 @@ const SettingsPage = {
       '<div class="hint" style="text-align:center;margin-top:8px">Deletes khatas, inventory, invoices and the login from this device. Export a backup first!</div>' +
       '</div>' +
 
-      '<div class="tiny muted" style="text-align:center;padding:6px 0 14px">Solar Khata v1.0 • offline-first PWA<br>' + UI.icon('zap', 12) + ' made for solar & inverter businesses</div>' +
+      '<div class="tiny muted" style="text-align:center;padding:6px 0 14px">Easy Khata v1.1 • offline-first PWA<br>' + UI.icon('zap', 12) + ' made for solar & inverter businesses</div>' +
       '</div></div>';
   },
 
   bind() {},
 
   async saveProfile() {
-    App.s.shopName = U.q('#st_shop').value.trim() || 'My Solar Shop';
+    App.s.shopName = U.q('#st_shop').value.trim() || 'My Shop';
     App.s.shopPhone = U.q('#st_phone').value.trim();
     App.s.currency = U.q('#st_cur').value;
     App.s.shopAddress = U.q('#st_addr').value.trim();

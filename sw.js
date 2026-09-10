@@ -1,10 +1,11 @@
-const SW_VERSION = 'solar-khata-v5';
+const SW_VERSION = 'solar-khata-v6';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './css/style.css',
+  './js/config.js',
   './js/util.js',
   './js/db.js',
   './js/ui.js',

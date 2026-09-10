@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#4f46e5">
-<meta name="description" content="Solar Khata — offline-first advance ledger, inventory and billing for solar & inverter businesses">
-<title>Solar Khata — Advance Ledger</title>
+<meta name="description" content="Easy Khata — offline-first advance ledger, inventory and billing for solar & inverter businesses">
+<title>Easy Khata — Advance Ledger</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/style.css">
@@ -14,6 +14,7 @@
 <div id="app">
   <div id="authView"></div>
   <div id="mainView" hidden>
+    <nav id="dnav"></nav>
     <main id="view"></main>
     <button id="fab" class="fab" hidden aria-label="Add"></button>
     <nav id="tabbar"></nav>
@@ -22,6 +23,7 @@
 <div id="sheetRoot"></div>
 <div id="toastRoot"></div>
 <div id="printArea"></div>
+<script src="js/config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/db.js"></script>
 <script src="js/ui.js"></script>
