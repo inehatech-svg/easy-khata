@@ -3,16 +3,18 @@ const Khata = {
   tab: 'daily',          // daily | people
   daySel: null,          // selected day for daily view
   search: '',
+  profileTab: 'ledger',
+  partyTab: 'customers',
 
   /* ---------- ledger math ---------- */
   // amount the customer owes (unapplied advances excluded)
   balanceOf(entries) {
-    const dr = U.sumType(entries, ['invoice', 'opening']).valueOf();
+    const minor = value => typeof Finance !== 'undefined' ? Finance.minor(value) : Math.round(U.num(value) * 100);
     let openDr = 0, openCr = 0;
-    entries.forEach(e => { if (e.type === 'opening') { if (U.num(e.amount) > 0) openDr += U.num(e.amount); else openCr += Math.abs(U.num(e.amount)); } });
-    const invoiceDr = U.sumType(entries, ['invoice']);
-    const cr = U.sumType(entries, ['payment', 'advance_apply', 'return', 'discount']) + openCr;
-    return invoiceDr + openDr - cr;
+    entries.forEach(e => { if (e.type === 'opening') { if (minor(e.amount) > 0) openDr += minor(e.amount); else openCr += Math.abs(minor(e.amount)); } });
+    const invoiceDr = entries.filter(e => ['invoice', 'purchase'].includes(e.type)).reduce((sum, e) => sum + minor(e.amount), 0);
+    const credit = entries.filter(e => ['payment', 'supplier_payment', 'advance_apply', 'return', 'discount'].includes(e.type)).reduce((sum, e) => sum + minor(e.amount), 0);
+    return typeof Finance !== 'undefined' ? Finance.major(invoiceDr + openDr - credit - openCr) : (invoiceDr + openDr - credit - openCr) / 100;
   },
 
   // unapplied advance pool
@@ -84,6 +86,8 @@ const Khata = {
   entryMeta: {
     invoice: { ic: 'receipt', cls: 'red', label: 'Sale', dr: true },
     payment: { ic: 'cash', cls: 'green', label: 'Payment received', dr: false },
+    supplier_payment: { ic: 'cash', cls: 'green', label: 'Paid to supplier', dr: false },
+    purchase: { ic: 'box', cls: 'pri', label: 'Stock purchase', dr: true },
     advance: { ic: 'wallet', cls: 'green', label: 'Advance received', dr: false },
     advance_apply: { ic: 'zap', cls: 'pri', label: 'Advance adjusted', dr: false },
     return: { ic: 'undo', cls: 'blue', label: 'Return', dr: false },
@@ -119,7 +123,8 @@ const Khata = {
       if (!e.customerId) return;
       (byCust[e.customerId] = byCust[e.customerId] || []).push(e);
     });
-    const rows = customers.map(c => {
+    const parties = customers.filter(c => !c.archived && (Khata.partyTab === 'suppliers' ? !!c.isSupplier : c.isCustomer !== false));
+    const rows = parties.map(c => {
       const es = byCust[c.id] || [];
       return { c, bal: Khata.balanceOf(es), adv: Khata.advanceOf(es) };
     });
@@ -130,9 +135,10 @@ const Khata = {
     }
     list.sort((a, b) => (b.bal - a.bal) || a.c.name.localeCompare(b.c.name));
     const totalDue = U.sum(rows.filter(r => r.bal > 0), r => r.bal);
-    return '<div class="stats">' +
+    return '<div class="segmented" style="margin-bottom:10px"><button class="' + (Khata.partyTab === 'customers' ? 'on' : '') + '" onclick="Khata.partyTab=\'customers\';Khata.renderBody()">Customers</button><button class="' + (Khata.partyTab === 'suppliers' ? 'on' : '') + '" onclick="Khata.partyTab=\'suppliers\';Khata.renderBody()">Suppliers</button></div>' +
+      '<div class="stats">' +
       '<div class="stat"><span class="s-label">' + UI.icon('users', 15) + ' Customers</span><div class="s-val">' + rows.length + '</div></div>' +
-      '<div class="stat"><span class="s-label">' + UI.icon('alert', 15) + ' Total receivable</span><div class="s-val ' + (totalDue > 0 ? 'red' : 'green') + '">' + U.money(totalDue) + '</div></div></div>' +
+      '<div class="stat"><span class="s-label">' + UI.icon('alert', 15) + (Khata.partyTab === 'suppliers' ? ' Total payable' : ' Total receivable') + '</span><div class="s-val ' + (totalDue > 0 ? 'red' : 'green') + '">' + U.money(totalDue) + '</div></div></div>' +
       '<div class="searchbar" style="margin-bottom:10px">' + UI.icon('search', 18) +
       '<input placeholder="Search name or phone…" value="' + U.esc(Khata.search) + '" oninput="Khata.search=this.value;Khata.renderBody()"></div>' +
       (list.length ? '<div class="list">' + list.map(r =>
@@ -141,10 +147,10 @@ const Khata = {
         '<div class="l-main"><div class="l-title">' + U.esc(r.c.name) + '</div>' +
         '<div class="l-sub">' + (r.c.phone ? U.esc(r.c.phone) + ' • ' : '') + U.esc(r.c.address || 'no address') + '</div></div>' +
         '<div class="l-right">' + (r.adv > 0 ? '<span class="chip green tiny">' + UI.icon('wallet', 12) + ' adv ' + U.money(r.adv) + '</span> ' : '') +
-        (r.bal > 0 ? '<div class="l-amt red">' + U.money(r.bal) + '</div><div class="l-tag">you\'ll receive</div>'
+        (r.bal > 0 ? '<div class="l-amt red">' + U.money(r.bal) + '</div><div class="l-tag">' + (Khata.partyTab === 'suppliers' ? 'you will give' : 'you will receive') + '</div>'
           : r.bal < 0 ? '<div class="l-amt green">' + U.money(-r.bal) + '</div><div class="l-tag">advance / credit</div>'
           : '<span class="chip green">clear</span>') + '</div></div>').join('') + '</div>'
-        : UI.empty('users', 'No customers yet', 'Tap + to add your first khata'));
+        : UI.empty('users', Khata.partyTab === 'suppliers' ? 'No suppliers yet' : 'No customers yet', 'Tap + to add a party'));
   },
 
   customerForm(id) {
@@ -158,7 +164,9 @@ const Khata = {
         '<div class="field"><label>Opening balance</label><input id="cu_open" inputmode="decimal" value="0" placeholder="+due / −adv"><div class="hint">' + (c ? 'edit from ledger' : 'positive = old due, negative = advance') + '</div></div>' +
         '</div>' +
         '<div class="field"><label>Address</label><input id="cu_addr" value="' + U.esc(c ? c.address || '' : '') + '" placeholder="village / street"></div>' +
+        '<div class="field"><label>Credit limit (optional)</label><input id="cu_limit" inputmode="decimal" value="' + U.num(c && c.creditLimit) + '" placeholder="0 means no limit"></div>' +
         '<div class="field"><label>Notes</label><textarea id="cu_notes" placeholder="anything special…">' + U.esc(c ? c.notes || '' : '') + '</textarea></div>' +
+        '<div class="field-row"><label class="row"><input id="cu_customer" type="checkbox" ' + (!c || c.isCustomer !== false ? 'checked' : '') + '> Customer</label><label class="row"><input id="cu_supplier" type="checkbox" ' + (c && c.isSupplier ? 'checked' : '') + '> Supplier</label></div>' +
         '<button class="btn btn-pri btn-block" onclick="Khata.saveCustomer(\'' + (id || '') + '\')">' + UI.icon('save', 17) + ' Save customer</button>'
       });
     });
@@ -169,8 +177,11 @@ const Khata = {
     if (!name) return UI.toast('Name is required', 'err');
     const patch = {
       name, phone: U.q('#cu_phone').value.trim(),
-      address: U.q('#cu_addr').value.trim(), notes: U.q('#cu_notes').value.trim()
+      address: U.q('#cu_addr').value.trim(), notes: U.q('#cu_notes').value.trim(),
+      isCustomer: U.q('#cu_customer').checked, isSupplier: U.q('#cu_supplier').checked,
+      creditLimit: Finance.major(Finance.minor(U.q('#cu_limit').value))
     };
+    if (!patch.isCustomer && !patch.isSupplier) return UI.toast('Choose customer, supplier, or both', 'err');
     if (id) {
       const c = await DB.get('customers', id);
       Object.assign(c, patch);
@@ -198,6 +209,7 @@ const Khata = {
     if (!c) return '<div class="page">' + UI.backHead('Customer') + '<div class="page-body">' + UI.empty('user', 'Customer not found') + '</div></div>';
     const entries = (await DB.idx('entries', 'customerId', id))
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const invoices = (await DB.idx('invoices', 'customerId', id)).sort((a, b) => (a.day || '').localeCompare(b.day || ''));
     entries.forEach(e => { e.customerName = c.name; });
     let run = 0;
     entries.forEach(e => {
@@ -211,7 +223,45 @@ const Khata = {
     Khata.personCust = c;
     const bal = Khata.balanceOf(entries);
     const adv = Khata.advanceOf(entries);
+    const creditPercent = U.num(c.creditLimit) > 0 ? Math.min(100, Math.round(Math.max(0, bal) / U.num(c.creditLimit) * 100)) : 0;
     const desc = entries.slice().reverse();
+    const bought = U.sum(invoices, invoice => invoice.total);
+    const received = U.sumType(entries, ['payment', 'advance']);
+    const settled = invoices.filter(invoice => Invoices.dueOf(invoice) <= 0 && Number.isFinite(Date.parse(invoice.day || '')));
+    const avgDays = settled.length ? Math.round(settled.reduce((sum, invoice) => {
+      const payments = entries.filter(entry => entry.invoiceId === invoice.id && entry.type === 'payment');
+      const last = payments.reduce((latest, entry) => (entry.day || '') > latest ? entry.day : latest, invoice.day);
+      return sum + Math.max(0, (Date.parse(last) - Date.parse(invoice.day)) / 86400000);
+    }, 0) / settled.length) : 0;
+    const aging = [0, 0, 0, 0, 0];
+    invoices.filter(invoice => Invoices.dueOf(invoice) > 0).forEach(invoice => {
+      const base = invoice.dueDate || invoice.day;
+      const days = Math.max(0, Math.floor((Date.parse(U.day()) - Date.parse(base)) / 86400000));
+      const index = days === 0 ? 0 : days <= 30 ? 1 : days <= 60 ? 2 : days <= 90 ? 3 : 4;
+      aging[index] = Finance.add(aging[index], Invoices.dueOf(invoice));
+    });
+    const tab = Khata.profileTab || 'ledger';
+    const tabs = [['ledger','Ledger'],['purchases','Purchases'],['payments','Payments'],['dues','Dues'],['items','Items bought']];
+    let panel = '';
+    if (tab === 'ledger') panel = desc.length ? '<div class="list">' + desc.map(e => Khata.entryRow(e, true)).join('') + '</div>' : UI.empty('book', 'Empty khata', 'Start with a sale, payment or advance');
+    else if (tab === 'purchases') panel = invoices.length ? '<div class="list">' + invoices.slice().reverse().map(invoice => Invoices.row(invoice)).join('') + '</div>' : UI.empty('receipt', 'No purchases yet');
+    else if (tab === 'payments') {
+      const payments = desc.filter(entry => entry.type === 'payment' || entry.type === 'advance');
+      panel = payments.length ? '<div class="list">' + payments.map(entry => Khata.entryRow(entry, false)).join('') + '</div>' : UI.empty('cash', 'No payments yet');
+    } else if (tab === 'dues') {
+      const dues = invoices.filter(invoice => Invoices.dueOf(invoice) > 0).sort((a, b) => (a.dueDate || a.day).localeCompare(b.dueDate || b.day));
+      panel = dues.length ? '<div class="list">' + dues.map(invoice => '<div class="lrow" onclick="App.nav(\'bill?id=' + invoice.id + '\')"><div class="l-main"><div class="l-title">' + U.esc(invoice.no) + ' · ' + U.fmtDay(invoice.day) + '</div><div class="l-sub">' + (invoice.dueDate ? 'Due ' + U.fmtDay(invoice.dueDate) : 'No due date') + '</div></div><div class="l-right"><div class="l-amt red">' + U.money(Invoices.dueOf(invoice)) + '</div><div class="l-tag">' + Math.max(0, Math.floor((Date.parse(U.day()) - Date.parse(invoice.dueDate || invoice.day)) / 86400000)) + ' days</div></div></div>').join('') + '</div>' : UI.empty('check', 'No outstanding invoices');
+    } else {
+      const products = {};
+      invoices.forEach(invoice => invoice.lines.forEach(line => {
+        const key = line.itemId || line.name;
+        if (!products[key]) products[key] = { name: line.name, qty: 0, total: 0 };
+        products[key].qty += U.num(line.qty);
+        products[key].total = Finance.add(products[key].total, Finance.multiply(line.qty, line.rate));
+      }));
+      const rows = Object.values(products).sort((a, b) => a.name.localeCompare(b.name));
+      panel = rows.length ? '<div class="list">' + rows.map(item => '<div class="lrow"><div class="l-main"><div class="l-title">' + U.esc(item.name) + '</div><div class="l-sub">Bought ' + U.fmtQty(item.qty) + '</div></div><div class="l-amt">' + U.money(item.total) + '</div></div>').join('') + '</div>' : UI.empty('box', 'No item history');
+    }
     return '<div class="page">' +
       UI.backHead(U.esc(c.name), (c.phone ? U.esc(c.phone) + ' • ' : '') + U.esc(c.address || 'no address'),
         '<button class="ph-btn" onclick="Khata.customerForm(\'' + c.id + '\')">' + UI.icon('edit', 18) + '</button>') +
@@ -221,31 +271,38 @@ const Khata = {
       '<div class="avatar ' + U.avatarHue(c.name) + '" style="width:48px;height:48px;border-radius:15px;font-size:17px">' + U.esc(U.initials(c.name)) + '</div>' +
       '<div style="flex:1;min-width:0"><div class="bold" style="font-size:16px">' + U.esc(c.name) + '</div>' +
       '<div class="tiny muted">' + entries.length + ' entries' + (c.notes ? ' • ' + U.esc(c.notes) : '') + '</div></div>' +
-      (bal > 0 ? '<span class="balance-pill" style="background:var(--redSoft);color:var(--red)">Due ' + U.money(bal) + '</span>'
+      (bal > 0 ? '<span class="balance-pill" style="background:var(--redSoft);color:var(--red)">' + (c.isSupplier ? 'You will give ' : 'You will receive ') + U.money(bal) + '</span>'
         : bal < 0 ? '<span class="balance-pill" style="background:var(--greenSoft);color:var(--green)">Advance ' + U.money(-bal) + '</span>'
         : '<span class="balance-pill" style="background:var(--greenSoft);color:var(--green)">' + UI.icon('check', 14) + ' Clear</span>') +
       '</div>' +
       (adv > 0 ? '<div class="kv" style="background:var(--greenSoft);border-radius:10px;padding:8px 12px;margin-bottom:12px"><span class="k bold">' + UI.icon('wallet', 14) + ' Advance pool available</span><span class="v green">' + U.money(adv) + '</span></div>' : '') +
+      (U.num(c.creditLimit) > 0 ? '<div class="hint">Credit limit ' + U.money(c.creditLimit) + ' · ' + creditPercent + '% used' + (bal > c.creditLimit ? ' · limit exceeded' : '') + '</div>' : '') +
+      '<div class="stats"><div class="stat"><div class="s-label">Purchased</div><div class="s-val">' + U.money(bought) + '</div></div><div class="stat"><div class="s-label">Received</div><div class="s-val">' + U.money(received) + '</div></div><div class="stat"><div class="s-label">Invoices</div><div class="s-val">' + invoices.length + '</div></div><div class="stat"><div class="s-label">Avg. days to pay</div><div class="s-val">' + avgDays + '</div></div></div>' +
+      '<div class="card"><div class="card-title">Due aging</div><div class="grid2">' + ['Current','1–30 days','31–60 days','61–90 days','90+ days'].map((label,index) => '<div class="kv"><span class="k">' + label + '</span><span class="v">' + U.money(aging[index]) + '</span></div>').join('') + '</div></div>' +
       '<div class="qact">' +
       '<button onclick="App.nav(\'bform?cust=' + c.id + '\')"><span class="qa-ic i-red">' + UI.icon('cart', 16) + '</span>Sale</button>' +
-      '<button onclick="Khata.addEntry(\'' + c.id + '\',\'payment\')"><span class="qa-ic i-green">' + UI.icon('cash', 16) + '</span>Payment</button>' +
+      (c.isSupplier ? '<button onclick="Khata.addEntry(\'' + c.id + '\',\'supplier_payment\')"><span class="qa-ic i-green">' + UI.icon('cash', 16) + '</span>Paid out</button>' : '<button onclick="Khata.addEntry(\'' + c.id + '\',\'payment\')"><span class="qa-ic i-green">' + UI.icon('cash', 16) + '</span>Payment</button>') +
       '<button onclick="Khata.addEntry(\'' + c.id + '\',\'advance\')"><span class="qa-ic i-green">' + UI.icon('wallet', 16) + '</span>Advance</button>' +
       '<button onclick="Khata.addEntry(\'' + c.id + '\',\'return\')"><span class="qa-ic i-blue">' + UI.icon('undo', 16) + '</span>Return</button>' +
       '<button onclick="Khata.addEntry(\'' + c.id + '\',\'discount\')"><span class="qa-ic i-amber">' + UI.icon('percent', 16) + '</span>Discount</button>' +
       '<button onclick="Khata.statement(\'' + c.id + '\')"><span class="qa-ic i-pri">' + UI.icon('printer', 16) + '</span>Statement</button>' +
+      (c.isCustomer !== false && c.phone ? '<button onclick="Reminders.compose(\'' + c.id + '\')"><span class="qa-ic i-amber">' + UI.icon('bell', 16) + '</span>Reminder</button>' : '') +
+      (c.phone ? '<a class="btn btn-sm" href="tel:' + encodeURIComponent(c.phone) + '"><span class="qa-ic i-blue">' + UI.icon('phone', 16) + '</span>Call</a><a class="btn btn-sm" target="_blank" rel="noopener" href="https://wa.me/' + c.phone.replace(/\D/g,'') + '"><span class="qa-ic i-green">' + UI.icon('chat', 16) + '</span>WhatsApp</a>' : '') +
       '</div></div>' +
-      '<div class="section-label">Khata history (newest first)</div>' +
-      (desc.length ? '<div class="list">' + desc.map(e => Khata.entryRow(e, true)).join('') + '</div>'
-        : UI.empty('book', 'Empty khata', 'Start with a sale, payment or advance')) +
+      '<div class="wa-subtab-nav">' + tabs.map(([key,label]) => '<button class="btn btn-sm ' + (tab === key ? 'btn-pri' : '') + '" onclick="Khata.setProfileTab(\'' + key + '\')">' + label + '</button>').join('') + '</div>' +
+      '<div class="section-label">' + U.esc(tabs.find(pair => pair[0] === tab)[1]) + '</div>' + panel +
       '<button class="btn btn-danger btn-block mt10" onclick="Khata.removeCustomer(\'' + c.id + '\')">' + UI.icon('trash', 16) + ' Delete khata</button>' +
       '</div></div>';
   },
 
+  setProfileTab(tab) { Khata.profileTab = tab; App.rerender(); },
+
   /* ---------- add / edit entries ---------- */
   addEntry(custId, type) {
     if (!custId && type !== 'expense') return Khata.pickCustomerFor(type);
+    if (type === 'payment') return Invoices.receiveCustomer(custId);
     const labels = {
-      payment: 'Receive payment', advance: 'Receive advance',
+      payment: 'Receive payment', supplier_payment: 'Pay supplier', advance: 'Receive advance',
       return: 'Record return', discount: 'Give discount', expense: 'Add expense', opening: 'Opening balance'
     };
     const isExpense = type === 'expense';
@@ -280,7 +337,7 @@ const Khata = {
 
   async saveEntry(id, custId, type) {
     const amt = U.num(U.q('#en_amt').value);
-    if (!amt) return UI.toast('Enter an amount', 'err');
+    if (!amt || (amt < 0 && type !== 'opening' && type !== 'discount')) return UI.toast('Enter a valid amount', 'err');
     if (id) {
       const e = await DB.get('entries', id);
       e.amount = amt;
@@ -306,11 +363,32 @@ const Khata = {
 
   async delEntry(id) {
     const e = await DB.get('entries', id);
-    const ok = await UI.confirm({ title: 'Delete entry?', message: (e.note || e.type) + ' — ' + U.money(e.amount) + ' will be removed from the ledger.', ok: 'Delete' });
+    const group = e.receiptGroup ? (await DB.all('entries')).filter(entry => entry.receiptGroup === e.receiptGroup) : [e];
+    const deleting = group.length ? group : [e];
+    const ids = new Set(deleting.map(entry => entry.id));
+    const ok = await UI.confirm({ title: 'Reverse payment?', message: (e.note || e.type) + ' — ' + U.money(e.amount) + (group.length > 1 ? ' and its ' + (group.length - 1) + ' invoice allocation(s)' : '') + ' will be reversed. The audit history will be retained.', ok: 'Reverse' });
     if (!ok) return;
-    await DB.del('entries', id);
+    const invoiceIds = Array.from(new Set(deleting.map(entry => entry.invoiceId).filter(Boolean)));
+    const ops = deleting.map(entry => ({ store: 'entries', action: 'delete', id: entry.id }));
+    for (const invoiceId of invoiceIds) {
+      const inv = await DB.get('invoices', invoiceId);
+      if (!inv) continue;
+      const remaining = (await DB.idx('entries', 'invoiceId', invoiceId)).filter(entry => !ids.has(entry.id));
+      inv.paid = U.sumType(remaining, ['payment']);
+      inv.advanceApplied = U.sumType(remaining, ['advance_apply']);
+      inv.returned = U.sumType(remaining, ['return']);
+      ops.push({ store: 'invoices', record: inv });
+    }
+    const returned = deleting.filter(entry => entry.type === 'return');
+    const itemIds = [];
+    for (const entry of returned) {
+      const linkedMoves = (await DB.all('moves')).filter(move => move.sourceEntryId === entry.id);
+      for (const move of linkedMoves) { itemIds.push(move.itemId); ops.push({ store: 'moves', action: 'delete', id: move.id }); }
+    }
+    await DB.batch(ops);
+    await Stock.recalcMany(itemIds);
     U.q('.sheet-overlay') && U.q('.sheet-overlay').remove();
-    UI.toast('Entry deleted', 'ok');
+    UI.toast('Payment reversed; history retained', 'ok');
     App.rerender();
   },
 
@@ -336,8 +414,15 @@ const Khata = {
 
   async removeCustomer(id) {
     const entries = await DB.idx('entries', 'customerId', id);
-    if (entries.length) return UI.toast('This khata has entries — it cannot be deleted', 'err');
-    const ok = await UI.confirm({ title: 'Delete customer?', message: 'Empty khata will be removed permanently.', ok: 'Delete' });
+    if (entries.length) {
+      const customer = await DB.get('customers', id);
+      customer.archived = true;
+      await DB.put('customers', customer);
+      UI.toast('Party archived; transaction history remains available', 'ok');
+      App.nav('khata');
+      return;
+    }
+    const ok = await UI.confirm({ title: 'Archive customer?', message: 'This empty party will be hidden from active lists. The record remains restorable in audit history.', ok: 'Archive' });
     if (!ok) return;
     await DB.del('customers', id);
     UI.toast('Customer deleted', 'ok');

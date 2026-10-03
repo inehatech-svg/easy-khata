@@ -3,23 +3,31 @@ const Dash = {
   async page() {
     const s = App.s;
     const day = U.day();
-    const [entries, items, customers, allEntries] = await Promise.all([
-      DB.idx('entries', 'day', day), DB.all('items'), DB.all('customers'), DB.all('entries')
+    const [entries, items, customers, allEntries, invoices] = await Promise.all([
+      DB.idx('entries', 'day', day), DB.all('items'), DB.all('customers'), DB.all('entries'), DB.all('invoices')
     ]);
     const sales = U.sumType(entries, ['invoice']);
     const received = U.sumType(entries, ['payment']) + U.sumType(entries, ['advance']);
-    const stockValue = U.sum(items.filter(i => !i.archived), i => U.num(i.qty) * U.num(i.costPrice));
+    const stockValue = U.sum(items.filter(i => !i.archived), i => U.moneyMul(i.qty, i.avgCost != null ? i.avgCost : i.costPrice));
+    const stockSaleValue = U.sum(items.filter(i => !i.archived), i => U.moneyMul(i.qty, i.salePrice));
+    const month = day.slice(0, 7);
+    const monthSales = U.sumType(allEntries.filter(entry => (entry.day || '').slice(0, 7) === month), ['invoice']);
+    const supplierDue = customers.filter(c => c.isSupplier).reduce((sum, c) => {
+      const partyEntries = allEntries.filter(entry => entry.customerId === c.id && ['purchase', 'supplier_payment', 'opening'].includes(entry.type));
+      return Finance.add(sum, Math.max(0, Khata.balanceOf(partyEntries)));
+    }, 0);
 
     const byCust = {};
     allEntries.forEach(e => { if (e.customerId) (byCust[e.customerId] = byCust[e.customerId] || []).push(e); });
     let receivable = 0;
-    const debtors = customers.map(c => {
+    const debtors = customers.filter(c => c.isCustomer !== false).map(c => {
       const bal = Khata.balanceOf(byCust[c.id] || []);
       if (bal > 0) receivable += bal;
       return { c, bal };
     }).filter(r => r.bal > 0).sort((a, b) => b.bal - a.bal);
 
     const low = Stock.lowList(items);
+    const overdue = invoices.filter(invoice => Invoices.dueOf(invoice) > 0 && invoice.dueDate && U.day() > invoice.dueDate);
     const hour = new Date().getHours();
     const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -47,6 +55,10 @@ const Dash = {
       '<div class="stat"><span class="s-label"><span class="s-icon i-green">' + UI.icon('cash', 15) + '</span> Today received</span><div class="s-val green">' + U.money(received) + '</div></div>' +
       '<div class="stat"><span class="s-label"><span class="s-icon i-red">' + UI.icon('alert', 15) + '</span> Receivable</span><div class="s-val ' + (receivable > 0 ? 'red' : '') + '">' + U.money(receivable) + '</div></div>' +
       '<div class="stat"><span class="s-label"><span class="s-icon i-amber">' + UI.icon('box', 15) + '</span> Stock value</span><div class="s-val">' + U.money(stockValue) + '</div></div>' +
+      '<div class="stat"><span class="s-label">This month sales</span><div class="s-val">' + U.money(monthSales) + '</div></div>' +
+      '<div class="stat"><span class="s-label">To give suppliers</span><div class="s-val">' + U.money(supplierDue) + '</div></div>' +
+      '<div class="stat"><span class="s-label">Stock at sale price</span><div class="s-val">' + U.money(stockSaleValue) + '</div></div>' +
+      '<div class="stat"><span class="s-label">Overdue invoices</span><div class="s-val ' + (overdue.length ? 'red' : '') + '">' + overdue.length + '</div></div>' +
       '</div>' +
 
       (low.length ?
@@ -63,6 +75,7 @@ const Dash = {
       '<button onclick="Khata.addEntry(null,\'payment\')"><span class="qa-ic i-green">' + UI.icon('cash', 16) + '</span>Payment</button>' +
       '<button onclick="Khata.addEntry(null,\'advance\')"><span class="qa-ic i-green">' + UI.icon('wallet', 16) + '</span>Advance</button>' +
       '<button onclick="Khata.customerForm()"><span class="qa-ic i-pri">' + UI.icon('user', 16) + '</span>Customer</button>' +
+      '<button onclick="Stock.pickStockItem()"><span class="qa-ic i-amber">' + UI.icon('box', 16) + '</span>Stock In</button>' +
       '</div></div>' +
 
       '<div class="card"><div class="card-title">' + UI.icon('chart', 16) + ' Last 7 days sales</div>' +

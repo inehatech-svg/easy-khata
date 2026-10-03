@@ -1,40 +1,780 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#4f46e5">
-<meta name="description" content="Easy Khata — offline-first advance ledger, inventory and billing for solar & inverter businesses">
-<title>Easy Khata — Advance Ledger</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Solis Inverters Pakistan (Karachi) | Solar Inverters, Net Metering & Hybrid Storage</title>
+  <meta name="description" content="Official Solis Inverters Pakistan regional hub in Karachi. High-efficiency single-phase, three-phase, utility, and hybrid energy storage inverters certified to NEPRA and K-Electric net-metering standards.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='30' fill='%23F15A29'/><path d='M50 8v12M50 80v12M8 50h12M80 50h12M20.3 20.3l8.5 8.5M71.2 71.2l8.5 8.5M20.3 79.7l8.5-8.5M71.2 28.8l8.5-8.5' stroke='%23F15A29' stroke-width='8' stroke-linecap='round'/></svg>" type="image/svg+xml">
+  <link rel="stylesheet" href="css/solis.css">
 </head>
 <body>
-<div id="app">
-  <div id="authView"></div>
-  <div id="mainView" hidden>
-    <nav id="dnav"></nav>
-    <main id="view"></main>
-    <button id="fab" class="fab" hidden aria-label="Add"></button>
-    <nav id="tabbar"></nav>
+
+  <!-- Top Utilities Bar -->
+  <div class="solis-topbar">
+    <div class="solis-topbar-left">
+      <span class="solis-topbar-item">
+        <span style="color:#F15A29;">📞</span>
+        Karachi Hotline: <strong class="dynamic-hotline">+92 21 3456 7890</strong>
+      </span>
+      <span class="solis-topbar-item">
+        <span style="color:#25D366;">💬</span>
+        WhatsApp: <strong class="dynamic-whatsapp">+92 300 123 4567</strong>
+      </span>
+      <span class="solis-topbar-item">
+        <span style="color:#F15A29;">⚡</span>
+        NEPRA &amp; K-Electric Net-Metering Certified
+      </span>
+    </div>
+    <div class="solis-topbar-right">
+      <a href="#estimate" class="solis-topbar-item" style="color:#F15A29; font-weight:600;">
+        ⚡ Karachi Solar Estimator
+      </a>
+    </div>
   </div>
-</div>
-<div id="sheetRoot"></div>
-<div id="toastRoot"></div>
-<div id="printArea"></div>
-<script src="js/config.js"></script>
-<script src="js/util.js"></script>
-<script src="js/db.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/stock.js"></script>
-<script src="js/invoices.js"></script>
-<script src="js/khata.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/backup.js"></script>
-<script src="js/import.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/app.js"></script>
+
+  <!-- Sticky Main Header -->
+  <header class="solis-header">
+    <div class="container">
+      <!-- Left: Solis Logo -->
+      <a href="#" class="solis-logo-link" aria-label="Solis Inverters Pakistan Home">
+        <svg class="solis-logo-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="26" fill="#F15A29"/>
+          <path d="M50 6v14M50 80v14M6 50h14M80 50h14M18.9 18.9l9.9 9.9M71.2 71.2l9.9 9.9M18.9 81.1l9.9-9.9M71.2 28.8l9.9-9.9" stroke="#F15A29" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+        <span class="solis-logo-text">solis</span>
+        <span class="solis-logo-badge" style="background:#E6F4EA; color:#137333;">PAKISTAN</span>
+      </a>
+
+      <!-- Center Navigation -->
+      <nav class="solis-nav" aria-label="Main Navigation">
+        <a href="#categories" class="solis-nav-link">Inverter</a>
+        <a href="#solutions" class="solis-nav-link">Solution</a>
+        <a href="#estimate" class="solis-nav-link" style="color:#F15A29; font-weight:700;">Estimate Order</a>
+        <a href="#trust-stats" class="solis-nav-link">Service and Support</a>
+        <a href="#resources" class="solis-nav-link">Enterprise Explore</a>
+        <a href="#about" class="solis-nav-link">About Us</a>
+        <a href="#where-to-buy" class="solis-nav-link">Where to Buy</a>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="solis-header-actions">
+        <!-- Search Trigger -->
+        <button id="searchTriggerBtn" class="header-action-btn" title="Search inverters and specs (Ctrl+K)" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+
+        <!-- Language / Currency Selector -->
+        <button id="langSelectorBtn" class="lang-selector-btn" title="Select Region & Currency" aria-label="Select Region">
+          <!-- Pakistan Flag SVG -->
+          <svg class="flag-icon" viewBox="0 0 640 480">
+            <rect width="640" height="480" fill="#01411c"/>
+            <rect width="160" height="480" fill="#ffffff"/>
+            <path fill="#ffffff" d="M380 140a120 120 0 1 0 80 200 100 100 0 1 1-80-200z"/>
+            <polygon fill="#ffffff" points="400,190 412,228 450,228 420,250 432,288 400,265 368,288 380,250 350,228 388,228"/>
+          </svg>
+          <span>PK / PKR ₨</span>
+          <span style="font-size:10px; color:#888;">▼</span>
+        </button>
+
+        <!-- Direct Action: Estimate Order -->
+        <a href="#estimate" class="btn-solis-primary" style="padding:8px 16px; font-size:13px; display:inline-flex;">
+          Order Quote
+        </a>
+
+        <!-- Mobile Menu Hamburger -->
+        <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Menu">
+          ☰
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Navigation Drawer -->
+  <div id="mobileNavDrawer" class="mobile-nav-drawer">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="solis-logo-text" style="font-size:22px;">solis <span style="font-size:11px; color:#137333;">PAKISTAN</span></span>
+      <button id="closeMobileNavBtn" class="solis-modal-close">&times;</button>
+    </div>
+    <ul class="mobile-nav-links">
+      <li><a href="#estimate" class="mobile-nav-link" style="color:#F15A29; font-weight:800;">⚡ Estimate Order &amp; Quotation</a></li>
+      <li><a href="#estimate-track" class="mobile-nav-link">🔍 Trace Order Status</a></li>
+      <li><a href="#categories" class="mobile-nav-link">Inverters Catalog</a></li>
+      <li><a href="#featured" class="mobile-nav-link">Featured Models</a></li>
+      <li><a href="#solutions" class="mobile-nav-link">Karachi &amp; Sindh Solutions</a></li>
+      <li><a href="#trust-stats" class="mobile-nav-link">Service &amp; Warranty</a></li>
+      <li><a href="#resources" class="mobile-nav-link">Downloads &amp; Training</a></li>
+      <li><a href="#about" class="mobile-nav-link">About Solis Pakistan</a></li>
+      <li><a href="#where-to-buy" class="mobile-nav-link">Where to Buy in Karachi</a></li>
+    </ul>
+    <div style="margin-top:auto; padding-top:20px; border-top:1px solid #e5e7eb;">
+      <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Karachi Support Hotline</div>
+      <a href="tel:+922134567890" class="dynamic-hotline" style="font-size:18px; font-weight:800; color:#F15A29;">+92 21 3456 7890</a>
+      <div style="margin-top:8px;">
+        <a href="https://wa.me/923001234567" target="_blank" class="btn-whatsapp-solid" style="padding:8px 12px; font-size:12px; width:100%;">
+          💬 WhatsApp: +92 300 123 4567
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Section (Full-Width Carousel / Slider) -->
+  <section class="solis-hero" aria-label="Featured Solis Inverters Carousel">
+    <div class="hero-track" id="heroTrack">
+      <!-- Slides dynamically rendered from js/solis.js -->
+    </div>
+
+    <!-- Navigation Controls -->
+    <button id="heroPrevBtn" class="hero-arrow prev" aria-label="Previous Slide">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button id="heroNextBtn" class="hero-arrow next" aria-label="Next Slide">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+
+    <!-- Pagination Dots -->
+    <div class="hero-pagination" id="heroPagination"></div>
+  </section>
+
+  <!-- ========================================================
+       NEW TAB: ESTIMATE ORDER & SYSTEM QUOTATION (PAKISTAN / KARACHI)
+       ======================================================== -->
+  <section id="estimate" class="solis-estimate-section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag" style="background:#FFF1EB; color:#F15A29;">Order Calculator</span>
+        <h2 class="section-title">Solar &amp; Inverter Order Estimator</h2>
+        <p class="section-subtitle">
+          Calculate your recommended system size, estimated monthly K-Electric bill savings in PKR, and submit your order directly to our Karachi engineering center.
+        </p>
+      </div>
+
+      <div class="estimator-main-layout">
+        <!-- Left: Interactive Estimator -->
+        <div class="estimator-card">
+          <h3 class="estimator-card-title">
+            <span>⚡</span> Step 1: Select System Capacity
+          </h3>
+          <p class="estimator-card-sub">Choose your home or factory roof capacity to see recommended inverter &amp; savings.</p>
+
+          <!-- System Size Quick Pills -->
+          <div class="size-pill-grid" id="orderSystemSizes">
+            <button type="button" class="size-pill-btn" data-size="3 kW">
+              <span class="size-pill-val">3 kW</span>
+              <span class="size-pill-sub">5 Marla / 120 Yds</span>
+            </button>
+            <button type="button" class="size-pill-btn" data-size="5 kW">
+              <span class="size-pill-val">5 kW</span>
+              <span class="size-pill-sub">10 Marla / 240 Yds</span>
+            </button>
+            <button type="button" class="size-pill-btn active" data-size="10 kW">
+              <span class="size-pill-val">10 kW</span>
+              <span class="size-pill-sub">1 Kanal / DHA / Gulshan</span>
+            </button>
+            <button type="button" class="size-pill-btn" data-size="15 kW">
+              <span class="size-pill-val">15 kW</span>
+              <span class="size-pill-sub">2 Kanal / Large Home</span>
+            </button>
+            <button type="button" class="size-pill-btn" data-size="20 kW">
+              <span class="size-pill-val">20 kW</span>
+              <span class="size-pill-sub">Commercial Building</span>
+            </button>
+            <button type="button" class="size-pill-btn" data-size="50 kW">
+              <span class="size-pill-val">50 kW+</span>
+              <span class="size-pill-sub">SITE / Korangi Factory</span>
+            </button>
+          </div>
+          <div class="solis-form-group custom-system-entry">
+            <label class="solis-label" for="customSystemSize">Need another system size?</label>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="number" id="customSystemSize" class="solis-input" min="1" max="1000" step="0.5" placeholder="Enter custom kW size" style="max-width:220px"><span id="customSizeRateHint" class="solis-help-text"></span></div>
+          </div>
+          <div class="solis-form-group">
+            <label class="solis-label">Optional items for your order</label>
+            <div id="pricedOrderItems" class="solis-priced-items"></div>
+          </div>
+
+          <!-- Inverter Type -->
+          <div class="solis-form-group">
+            <label class="solis-label">Inverter &amp; System Type</label>
+            <select id="estInverterType" class="solis-select">
+              <option value="hybrid">S6 Hybrid Energy Storage (Zero Load Shedding + K-Electric Net Metering) [Recommended]</option>
+              <option value="ongrid">S6 Three-Phase On-Grid (Pure Net Metering to sell units to K-Electric)</option>
+              <option value="single">S6 Single Phase On-Grid (Compact Budget System)</option>
+            </select>
+          </div>
+
+          <!-- Battery Storage Choice -->
+          <div class="solis-form-group">
+            <label class="solis-label">Battery Backup for Load Shedding</label>
+            <select id="estBatteryType" class="solis-select">
+              <option value="lithium">Lithium LiFePO4 Battery Bank (10-15 Yrs Lifespan, 6000+ Cycles)</option>
+              <option value="tubular">Heavy Duty Tall Tubular Lead-Acid (Cost Effective Backup)</option>
+              <option value="none">No Battery (Daytime Solar Only, Pure Net Metering)</option>
+            </select>
+          </div>
+
+          <!-- Monthly Electricity Bill / Units -->
+          <div class="solis-form-group">
+            <label class="solis-label">Current Monthly Electricity Bill / Units</label>
+            <select id="estMonthlyBill" class="solis-select">
+              <option value="PKR 45,000 / 600 Units">₨ 35,000 – ₨ 50,000 / Month (Approx 500 – 750 Units)</option>
+              <option value="PKR 85,000 / 1,400 Units" selected>₨ 75,000 – ₨ 100,000 / Month (Approx 1,200 – 1,600 Units)</option>
+              <option value="PKR 150,000 / 2,400 Units">₨ 130,000 – ₨ 180,000 / Month (Approx 2,000 – 2,800 Units)</option>
+              <option value="PKR 300,000+ Industrial">₨ 250,000+ / Month (Commercial / Industrial)</option>
+            </select>
+          </div>
+
+          <!-- Calculation Result Card -->
+          <div class="est-calc-result-box">
+            <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#F15A29; font-weight:800; margin-bottom:8px;">
+              ☀️ KARACHI SOLAR HARVEST PROJECTION
+            </div>
+            <div class="est-calc-row">
+              <span style="color:#adb5bd;">Monthly Solar Generation:</span>
+              <strong id="calcMonthlyUnits" style="color:#fff;">~1,400 Units (kWh) / Month</strong>
+            </div>
+            <div class="est-calc-row">
+              <span style="color:#adb5bd;">Estimated K-Electric Bill Savings:</span>
+              <strong id="calcMonthlySavings" style="color:#10B981;">₨ 86,800 / Month</strong>
+            </div>
+            <div class="est-calc-row">
+              <span style="color:#adb5bd;">Recommended Inverter:</span>
+              <strong id="calcRecModel" style="color:#F15A29;">S6-EH1P10K-H Whole-Home Hybrid</strong>
+            </div>
+            <div class="est-calc-row total-row">
+              <div>
+                <span style="font-size:11.5px; color:#9ca3af; text-transform:uppercase; display:block;">Estimated Turnkey Cost</span>
+                <span style="font-size:11px; color:#6b7280;">Including Panels, Inverter &amp; Net-Metering</span>
+              </div>
+              <div class="est-total-val" id="calcEstCost">₨ 1,450,000 – ₨ 1,850,000</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Customer Order Submission Form -->
+        <div class="estimator-card">
+          <h3 class="estimator-card-title">
+            <span>📝</span> Step 2: Customer Information
+          </h3>
+          <p class="estimator-card-sub">Submit your details to receive an official PDF quotation and schedule a site survey.</p>
+
+          <form id="estimateOrderForm">
+            <input type="hidden" id="orderInverterModelHidden" value="S6-EH1P10K-H Whole-Home Hybrid">
+            <input type="hidden" id="orderCostHidden" value="₨ 1,450,000 – ₨ 1,850,000">
+
+            <div class="solis-form-group">
+              <label class="solis-label">Full Name *</label>
+              <input type="text" id="orderCustomerName" class="solis-input" placeholder="e.g. Tariq Mehmood" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="solis-form-group">
+                <label class="solis-label">Phone / WhatsApp Number *</label>
+                <input type="tel" id="orderPhone" class="solis-input" placeholder="0300-1234567" required>
+              </div>
+              <div class="solis-form-group">
+                <label class="solis-label">City *</label>
+                <select id="orderCity" class="solis-select">
+                  <option value="Karachi" selected>Karachi</option>
+                  <option value="Lahore">Lahore</option>
+                  <option value="Islamabad">Islamabad / Rawalpindi</option>
+                  <option value="Multan">Multan</option>
+                  <option value="Faisalabad">Faisalabad</option>
+                  <option value="Hyderabad">Hyderabad (Sindh)</option>
+                  <option value="Sukkur">Sukkur (Sindh)</option>
+                  <option value="Other">Other City</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="solis-form-group">
+              <label class="solis-label">Area / Address in Karachi *</label>
+              <input type="text" id="orderArea" class="solis-input" placeholder="e.g. DHA Phase 6, Clifton Block 5, Gulshan-e-Iqbal, SITE..." required>
+            </div>
+
+            <div class="solis-form-group">
+              <label class="solis-label">Special Requirements / Notes</label>
+              <textarea id="orderNotes" class="solis-textarea" placeholder="e.g. Want to run 2 Inverter ACs + fridge on solar during daytime, need K-Electric green meter application assistance..."></textarea>
+            </div>
+
+            <div id="customOrderModules"></div>
+
+            <div style="margin-top:20px;">
+              <button type="submit" class="btn-solis-primary" style="width:100%; padding:14px; font-size:15px; font-weight:700;">
+                Confirm &amp; Submit Estimate Order &rarr;
+              </button>
+            </div>
+
+            <div style="font-size:12px; color:#6b7280; text-align:center; margin-top:12px;">
+              🔒 Your order is instantly routed to our Karachi engineering desk and registered into our order tracking system.
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Order Tracker Tool (Trace Existing Order) -->
+      <div id="estimate-track" class="order-tracker-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:800; color:#111827; display:flex; align-items:center; gap:8px;">
+              <span>🔍</span> Trace Your Solar Order Status
+            </h3>
+            <p style="font-size:13px; color:#6b7280;">Already placed an estimate order? Enter your Tracking ID below to see real-time updates.</p>
+          </div>
+        </div>
+
+        <div class="tracking-input-wrap">
+          <input type="text" id="trackingIdInput" class="solis-input" style="max-width:340px; font-size:14px; font-weight:700; text-transform:uppercase;" placeholder="Enter Tracking ID (e.g. PK-ORD-8821)">
+          <button type="button" id="trackOrderSubmitBtn" class="btn-solis-primary" style="padding:10px 22px;">
+            Trace Order
+          </button>
+        </div>
+
+        <!-- Dynamic Tracking Status Result Output -->
+        <div id="trackingStatusResult" style="display:none;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1. Product Categories (Grid of Cards) -->
+  <section id="categories" class="solis-categories-section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Product Portfolio</span>
+        <h2 class="section-title">Comprehensive PV &amp; Storage Technologies</h2>
+        <p class="section-subtitle">Engineered to meet Pakistan's demanding grid voltage fluctuations, dust, and NEPRA SRO net-metering regulations.</p>
+      </div>
+
+      <div class="categories-grid" id="categoriesGrid">
+        <!-- Dynamically rendered: Single Phase, Three Phase, Utility Scale, Energy Storage, Accessories -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Featured Products / Highlights -->
+  <section id="featured" class="solis-featured-section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Popular Models</span>
+        <h2 class="section-title">Featured Inverters for Pakistan</h2>
+        <p class="section-subtitle">NEPRA certified and K-Electric approved with integrated AFCI, zero-export control, and high-voltage Lithium &amp; Tubular battery architecture.</p>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="featured-filter-bar" id="featuredFilterBar"></div>
+
+      <!-- Products Grid -->
+      <div class="products-grid" id="productsGrid">
+        <!-- Dynamically rendered from js/solis.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Solutions Section -->
+  <section id="solutions" class="solis-solutions-section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Targeted Solutions</span>
+        <h2 class="section-title">Engineered For Karachi &amp; Nationwide Applications</h2>
+        <p class="section-subtitle">Tailored solar and energy storage solutions for residential load shedding, industrial parks, tubewell farms, and turnkey net-metering.</p>
+      </div>
+
+      <div class="solutions-wrapper" id="solutionsWrapper">
+        <!-- Dynamically rendered: Residential, C&I, Tubewell, Net Metering -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Trust / Stats Bar -->
+  <section id="trust-stats" class="solis-trust-bar">
+    <div class="container">
+      <div class="trust-top-content">
+        <div>
+          <h2 class="trust-headline dynamic-slogan" data-editable="company.slogan">Bankable, Reliable, Local</h2>
+          <p class="trust-sub">Pakistan Regional Hub, RMA &amp; Spare Parts Center at Main Shahrah-e-Faisal, Karachi</p>
+        </div>
+
+        <div class="hotline-action-box">
+          <div class="hotline-info">
+            <span class="hotline-label">Karachi Customer Hotline</span>
+            <a href="tel:+922134567890" class="hotline-number dynamic-hotline" data-editable="company.hotline">+92 21 3456 7890</a>
+          </div>
+          <button class="btn-solis-primary btn-online-service" style="padding:14px 24px;">
+            Online Service Portal
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Key Metrics -->
+      <div class="trust-metrics-grid" id="trustMetricsGrid">
+        <!-- Dynamically rendered: Top 3, 1.5+ GW, 18+ Yrs, Karachi Regional Center -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Quick Links / Resources -->
+  <section id="resources" class="solis-resources-section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Resource Center</span>
+        <h2 class="section-title">Downloads &amp; Training</h2>
+        <p class="section-subtitle">Everything solar installers, contractors, and homeowners need to commission and monitor Solis inverters in Pakistan.</p>
+      </div>
+
+      <div class="resources-grid" id="resourcesGrid">
+        <!-- Video Center, NEPRA Downloads, Sizing Calculator, Karachi Service Center -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Where to Buy / Distributors in Pakistan -->
+  <section id="where-to-buy" style="padding:70px 0; background-color:#F8F9FA; border-top:1px solid #E5E7EB;">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Authorized Partners</span>
+        <h2 class="section-title">Where to Buy in Karachi &amp; Pakistan</h2>
+        <p class="section-subtitle">Solis inverters, dataloggers, and accessories are stocked nationwide across premier electrical and renewable energy distributors.</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
+        <div style="background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size:11px; font-weight:700; color:#F15A29; text-transform:uppercase;">Master Stockist • Karachi</div>
+          <h4 style="font-size:17px; font-weight:700; margin:4px 0 8px;">Regal Solar Technologies</h4>
+          <p style="font-size:13px; color:#4B5563; margin-bottom:12px;">Main Shahrah-e-Faisal, Karachi. Complete stock of S6 hybrid residential and 100kW commercial inverters.</p>
+          <a href="tel:+922134321199" style="font-size:13px; font-weight:600; color:#F15A29;">Call Distributor: +92 21 3432 1199 &rarr;</a>
+        </div>
+        <div style="background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size:11px; font-weight:700; color:#F15A29; text-transform:uppercase;">Authorized Partner • Karachi</div>
+          <h4 style="font-size:17px; font-weight:700; margin:4px 0 8px;">Alpha Solar Pakistan</h4>
+          <p style="font-size:13px; color:#4B5563; margin-bottom:12px;">Block 4, Gulshan-e-Iqbal, Karachi. Certified Solis installation partner for DHA, Clifton &amp; Bahria projects.</p>
+          <a href="tel:+923008294411" style="font-size:13px; font-weight:600; color:#F15A29;">Call Distributor: +92 300 829 4411 &rarr;</a>
+        </div>
+        <div style="background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size:11px; font-weight:700; color:#F15A29; text-transform:uppercase;">Authorized Partner • Lahore</div>
+          <h4 style="font-size:17px; font-weight:700; margin:4px 0 8px;">Premier Energy Solar Hub</h4>
+          <p style="font-size:13px; color:#4B5563; margin-bottom:12px;">Commercial Broadway, Phase 8 DHA, Lahore. Central Punjab stock and turnkey engineering support.</p>
+          <a href="tel:+924235742200" style="font-size:13px; font-weight:600; color:#F15A29;">Call Distributor: +92 42 3574 2200 &rarr;</a>
+        </div>
+        <div style="background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size:11px; font-weight:700; color:#F15A29; text-transform:uppercase;">Authorized Partner • Islamabad</div>
+          <h4 style="font-size:17px; font-weight:700; margin:4px 0 8px;">SkyElectric Power Partners</h4>
+          <p style="font-size:13px; color:#4B5563; margin-bottom:12px;">Blue Area, Islamabad. Serving residential and commercial smart microgrids across Rawalpindi &amp; KPK.</p>
+          <a href="tel:+92512801144" style="font-size:13px; font-weight:600; color:#F15A29;">Call Distributor: +92 51 280 1144 &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Newsletter Subscription -->
+  <section class="solis-newsletter-section">
+    <div class="container">
+      <div class="newsletter-box">
+        <div class="newsletter-text">
+          <h3 class="newsletter-heading">Get the latest news of Ginlong Solis Pakistan</h3>
+          <p class="newsletter-sub">Receive NEPRA net-metering policy updates, firmware releases, and Karachi installer workshops.</p>
+        </div>
+
+        <form id="newsletterForm" class="newsletter-form">
+          <input type="email" id="newsletterEmail" class="newsletter-input" placeholder="Enter your business email" required>
+          <button type="submit" class="btn-solis-primary" style="white-space:nowrap;">
+            Subscribe
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="solis-footer" id="about">
+    <div class="container">
+      <div class="footer-top-grid">
+        <!-- Brand Column -->
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="26" fill="#F15A29"/>
+              <path d="M50 6v14M50 80v14M6 50h14M80 50h14M18.9 18.9l9.9 9.9M71.2 71.2l9.9 9.9M18.9 81.1l9.9-9.9M71.2 28.8l9.9-9.9" stroke="#F15A29" stroke-width="7" stroke-linecap="round"/>
+            </svg>
+            <span class="footer-logo-text">solis</span>
+          </div>
+          <p class="footer-brand-desc">
+            Ginlong (Solis) Technologies is one of the world's largest solar inverter manufacturers. The Pakistan regional hub in Karachi provides dedicated warranty, local engineering, and spare parts.
+          </p>
+          <div class="footer-socials">
+            <a href="https://linkedin.com" target="_blank" rel="noopener" class="social-icon-btn" aria-label="LinkedIn">in</a>
+            <a href="https://youtube.com" target="_blank" rel="noopener" class="social-icon-btn" aria-label="YouTube">▶</a>
+            <a href="https://wa.me/923001234567" target="_blank" rel="noopener" class="social-icon-btn" aria-label="WhatsApp" style="background:#25D366;">💬</a>
+            <a href="https://facebook.com" target="_blank" rel="noopener" class="social-icon-btn" aria-label="Facebook">f</a>
+          </div>
+        </div>
+
+        <!-- Inverters -->
+        <div>
+          <h4 class="footer-col-title">Inverters</h4>
+          <ul class="footer-links-list">
+            <li><a href="#featured">Single Phase Inverters</a></li>
+            <li><a href="#featured">Three Phase Inverters</a></li>
+            <li><a href="#featured">S6 Hybrid Energy Storage</a></li>
+            <li><a href="#featured">Utility Scale 1500V</a></li>
+            <li><a href="#featured">Solis 4G Dataloggers</a></li>
+            <li><a href="#featured">Zero-Export Smart Meters</a></li>
+          </ul>
+        </div>
+
+        <!-- Solutions -->
+        <div>
+          <h4 class="footer-col-title">Solutions</h4>
+          <ul class="footer-links-list">
+            <li><a href="#solutions">Karachi Residential Solar</a></li>
+            <li><a href="#solutions">Commercial &amp; Industrial</a></li>
+            <li><a href="#solutions">Sindh Tubewell Solar</a></li>
+            <li><a href="#solutions">K-Electric Net-Metering</a></li>
+            <li><a href="#solutions">Load Shedding Storage</a></li>
+            <li><a href="#estimate">Estimate Order Online</a></li>
+          </ul>
+        </div>
+
+        <!-- Service & Support -->
+        <div>
+          <h4 class="footer-col-title">Service &amp; Support</h4>
+          <ul class="footer-links-list">
+            <li><a href="#trust-stats" class="btn-online-service">Karachi RMA Ticket</a></li>
+            <li><a href="#resources">NEPRA Certificates</a></li>
+            <li><a href="#estimate-track">Trace Order Status</a></li>
+            <li><a href="#where-to-buy">Karachi Authorized Dealers</a></li>
+          </ul>
+        </div>
+
+        <!-- Karachi Office Contact -->
+        <div>
+          <h4 class="footer-col-title">Karachi Regional HQ</h4>
+          <div class="footer-contact-item">
+            <span class="footer-contact-icon">📍</span>
+            <span class="dynamic-address">Suite 402, 4th Floor, Business Avenue, Main Shahrah-e-Faisal, Karachi 75400, Pakistan</span>
+          </div>
+          <div class="footer-contact-item">
+            <span class="footer-contact-icon">📞</span>
+            <a href="tel:+922134567890" class="dynamic-hotline" style="color:#F15A29; font-weight:700;">+92 21 3456 7890</a>
+          </div>
+          <div class="footer-contact-item">
+            <span class="footer-contact-icon">💬</span>
+            <a href="https://wa.me/923001234567" class="dynamic-whatsapp" style="color:#25D366; font-weight:700;">+92 300 123 4567</a>
+          </div>
+          <div class="footer-contact-item">
+            <span class="footer-contact-icon">✉️</span>
+            <a href="mailto:pakistan@ginlong.com" class="dynamic-email">pakistan@ginlong.com</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row -->
+      <div class="footer-bottom">
+        <div>
+          Copyright &copy; 2019-<span class="dynamic-year">2026</span> Ginlong Technologies Pakistan. All Rights Reserved.
+        </div>
+        <div class="footer-bottom-links">
+          <a href="#">Privacy Policy</a>
+          <span>|</span>
+          <a href="#">Terms of Use</a>
+          <span>|</span>
+          <a href="#estimate">Estimate Order</a>
+          <span>|</span>
+          <a href="#trust-stats">Karachi RMA Center</a>
+        </div>
+      </div>
+
+      <!-- NEPRA Compliance statement at bottom -->
+      <div class="footer-icp text-center" style="text-align:center;">
+        NEPRA SRO 892(I)/2015 Compliant | K-Electric, LESCO, IESCO, FESCO Approved Inverters | Stock Code: 300763.SZ
+      </div>
+      <div class="powered-by-ineha"><span>Powered by</span><img src="images/ineha-tech.png" alt="Ineha Tech"></div>
+    </div>
+  </footer>
+
+  <!-- ========================================================
+       MODALS: Order Success, Search, Technical Specs, Online Service, Language
+       ======================================================== -->
+
+  <!-- Order Confirmation Success Modal -->
+  <div id="orderSuccessModalBackdrop" class="solis-modal-backdrop">
+    <div class="solis-modal-box" style="max-width:540px;">
+      <div class="solis-modal-header" style="background:#FFF1EB; border-bottom:1px solid #F15A29;">
+        <div class="solis-modal-title" style="color:#F15A29; display:flex; align-items:center; gap:8px;">
+          <span>🎉</span> Solar Order Received!
+        </div>
+        <button class="solis-modal-close">&times;</button>
+      </div>
+      <div class="solis-modal-body">
+        <div style="text-align:center; padding:10px 0 20px;">
+          <div style="font-size:12px; color:#6b7280; text-transform:uppercase; font-weight:700;">Your Order Tracking ID</div>
+          <div id="successOrderId" style="font-size:28px; font-weight:900; color:#F15A29; font-family:monospace; margin:4px 0 12px;">PK-ORD-0000</div>
+          <p style="font-size:14px; color:#374151;">
+            Thank you, <strong id="successCustomerName">Customer</strong>! Your solar estimate order has been registered and assigned to our Karachi engineering team.
+          </p>
+        </div>
+
+        <div style="background:#F8F9FA; border-radius:8px; padding:14px; margin-bottom:20px; font-size:13px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:#6b7280;">System Configuration:</span>
+            <strong id="successSystemDetail" style="color:#111827;">10 kW Hybrid</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#6b7280;">Estimated Turnkey Cost:</span>
+            <strong id="successEstimatedCost" style="color:#059669;">₨ 1,450,000</strong>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <a id="successWhatsAppBtn" href="#" target="_blank" class="btn-whatsapp-solid" style="justify-content:center; padding:12px;">
+            💬 Fast-Track via WhatsApp with Karachi Engineer
+          </a>
+          <button id="successTrackOrderBtn" class="btn-solis-secondary" style="justify-content:center; padding:10px;">
+            🔍 Trace Order Live on Website
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Modal -->
+  <div id="searchModalBackdrop" class="solis-modal-backdrop">
+    <div class="solis-modal-box">
+      <div class="solis-modal-header">
+        <div class="solis-modal-title">Search Inverters, Specs &amp; Solutions</div>
+        <button class="solis-modal-close">&times;</button>
+      </div>
+      <div class="solis-modal-body">
+        <div class="search-input-wrap">
+          <span class="search-input-icon">🔍</span>
+          <input type="text" id="searchInputField" class="search-input-field" placeholder="Search by model (e.g. S6, Hybrid, 10K, Karachi, K-Electric, Net-metering)...">
+        </div>
+        <div class="search-results-list" id="searchResultsList">
+          <div style="padding:16px; color:#9ca3af; text-align:center; font-size:13px;">Type a model name to see instant specs and matching systems.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Specifications Detail Modal -->
+  <div id="specModalBackdrop" class="solis-modal-backdrop">
+    <div class="solis-modal-box" style="max-width:780px;">
+      <div class="solis-modal-header">
+        <div class="solis-modal-title" id="specModalTitle">Technical Specifications</div>
+        <button class="solis-modal-close">&times;</button>
+      </div>
+      <div class="solis-modal-body">
+        <div class="spec-modal-layout">
+          <div class="spec-modal-image-wrap">
+            <img id="specModalImage" src="" alt="Product view" style="max-height:220px; object-fit:contain;">
+          </div>
+          <div>
+            <p id="specModalDesc" style="font-size:13px; color:#4B5563; margin-bottom:12px; line-height:1.5;"></p>
+            <table class="spec-table">
+              <tbody id="specModalTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="solis-footer">
+        <button id="specDownloadDatasheetBtn" class="btn-solis-secondary" style="padding:8px 16px; font-size:13px;">
+          📥 Download Datasheet (PDF)
+        </button>
+        <button id="specOrderNowBtn" class="btn-solis-primary" style="padding:8px 18px; font-size:13px;">
+          Order This Model &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Online Service / RMA Inquiry Modal -->
+  <div id="serviceModalBackdrop" class="solis-modal-backdrop">
+    <div class="solis-modal-box">
+      <div class="solis-modal-header">
+        <div class="solis-modal-title">Karachi Service &amp; RMA Center Request</div>
+        <button class="solis-modal-close">&times;</button>
+      </div>
+      <div class="solis-modal-body">
+        <form id="serviceTicketForm">
+          <div class="solis-form-group">
+            <label class="solis-label">Your Name / Solar Company *</label>
+            <input type="text" class="solis-input" placeholder="e.g. Karachi Solar Solutions" required>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="solis-form-group">
+              <label class="solis-label">Contact Email *</label>
+              <input type="email" class="solis-input" placeholder="info@company.com" required>
+            </div>
+            <div class="solis-form-group">
+              <label class="solis-label">Phone / WhatsApp *</label>
+              <input type="tel" class="solis-input" placeholder="0300-1234567" required>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="solis-form-group">
+              <label class="solis-label">Inverter Serial Number (SN)</label>
+              <input type="text" class="solis-input" placeholder="e.g. 11085223000...">
+            </div>
+            <div class="solis-form-group">
+              <label class="solis-label">Inverter Model</label>
+              <select class="solis-select">
+                <option>S6-EH1P(3.8-6)K-H-PK Hybrid</option>
+                <option>S6-EH1P(8-11.4)K-H-PK Whole-Home</option>
+                <option>S6-GR3P(10-20)K-PK Three Phase</option>
+                <option>S5-GC(50-110)K-PK Commercial</option>
+                <option>S6-GR1P(2.5-4)K-PK Compact</option>
+                <option>Other / Accessory</option>
+              </select>
+            </div>
+          </div>
+          <div class="solis-form-group">
+            <label class="solis-label">Issue Description / Fault Code</label>
+            <textarea class="solis-textarea" placeholder="Please describe the alarm or issue (e.g. Grid-INTF01, AFCI alarm, K-Electric voltage trip, battery communication)..." required></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+            <button type="submit" class="btn-solis-primary" style="width:100%;">
+              Submit Service Request to Karachi Hub
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Language / Currency Selection Modal -->
+  <div id="langModalBackdrop" class="solis-modal-backdrop">
+    <div class="solis-modal-box" style="max-width:440px;">
+      <div class="solis-modal-header">
+        <div class="solis-modal-title">Select Region &amp; Currency</div>
+        <button class="solis-modal-close">&times;</button>
+      </div>
+      <div class="solis-modal-body">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="search-item lang-option" data-lang="Pakistan (PKR ₨ - English)">
+            <strong>🇵🇰 Pakistan (PKR ₨ - English)</strong>
+            <span style="color:#F15A29; font-weight:700;">✓ Active</span>
+          </div>
+          <div class="search-item lang-option" data-lang="Pakistan (PKR ₨ - Urdu)">
+            <strong>🇵🇰 پاکستان (اردو / PKR ₨)</strong>
+            <span>Select &rarr;</span>
+          </div>
+          <div class="search-item lang-option" data-lang="United States (USD $)">
+            <strong>🇺🇸 United States (USD $)</strong>
+            <span>Select &rarr;</span>
+          </div>
+          <div class="search-item lang-option" data-lang="Middle East & UAE (AED)">
+            <strong>🇦🇪 Middle East &amp; UAE (AED)</strong>
+            <span>Select &rarr;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/solis-data.js"></script>
+  <script src="js/solis.js"></script>
 </body>
 </html>

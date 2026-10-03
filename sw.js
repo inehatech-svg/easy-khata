@@ -1,12 +1,17 @@
-const SW_VERSION = 'solar-khata-v6';
+const SW_VERSION = 'solar-khata-v16';
 const ASSETS = [
   './',
   './index.html',
+  './khata.html',
   './manifest.webmanifest',
   './icon.svg',
+  './images/ineha-tech.png',
   './css/style.css',
+  './css/solis.css',
   './js/config.js',
+  './js/i18n.js',
   './js/util.js',
+  './js/finance.js',
   './js/db.js',
   './js/ui.js',
   './js/auth.js',
@@ -14,9 +19,13 @@ const ASSETS = [
   './js/invoices.js',
   './js/khata.js',
   './js/dashboard.js',
+  './js/reports.js',
+  './js/reminders.js',
   './js/backup.js',
   './js/import.js',
   './js/settings.js',
+  './js/solis-data.js',
+  './js/khata-webadmin.js',
   './js/app.js'
 ];
 
@@ -48,7 +57,7 @@ self.addEventListener('fetch', (e) => {
         const copy = res.clone();
         caches.open(SW_VERSION).then((c) => c.put(e.request, copy)).catch(() => {});
         return res;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => caches.match(url.pathname.endsWith('/khata.html') ? './khata.html' : './index.html'));
     })
   );
 });

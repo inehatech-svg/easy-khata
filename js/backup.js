@@ -1,9 +1,9 @@
 /* Backup: JSON export/import with merge (last-write-wins) + Google Drive app-data sync */
 const Backup = {
   async collect() {
-    const stores = ['settings', 'users', 'items', 'moves', 'customers', 'entries', 'invoices'];
+    const stores = ['settings', 'users', 'items', 'moves', 'customers', 'entries', 'invoices', 'audit_log', 'reminders'];
     const out = {};
-    for (const s of stores) out[s] = await DB.all(s);
+    for (const s of stores) out[s] = await DB.all(s, { includeDeleted: true });
     return {
       app: 'easy-khata', version: 1,
       exportedAt: U.nowISO(), deviceId: Backup.deviceId(),
@@ -82,12 +82,12 @@ const Backup = {
   },
 
   async apply(data, mode) {
-    const stores = ['settings', 'users', 'items', 'moves', 'customers', 'entries', 'invoices'];
+    const stores = ['settings', 'users', 'items', 'moves', 'customers', 'entries', 'invoices', 'audit_log', 'reminders'];
     for (const s of stores) {
       if (!data.data[s]) continue;
       if (mode === 'replace') await DB.clear(s);
       if (mode === 'merge') {
-        const existing = await DB.all(s);
+        const existing = await DB.all(s, { includeDeleted: true });
         const keyOf = r => (s === 'settings' ? r.key : r.id);
         const mine = {};
         existing.forEach(r => { mine[keyOf(r)] = r; });

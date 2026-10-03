@@ -52,13 +52,17 @@ const ICONS = {
   camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-  archive: '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>'
+  archive: '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'
 };
 
 const UI = {
   icon(name, size) {
     const s = size || 20;
-    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+    const material = MATERIAL_ICONS[name] || 'help';
+    return '<span class="material-symbols-rounded material-icon" style="font-size:' + s + 'px" aria-hidden="true">' + material + '</span>' +
+      '<svg class="icon-fallback" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
   },
 
   toast(msg, type) {
@@ -131,3 +135,24 @@ const UI = {
       (sub ? '<div class="ph-sub">' + sub + '</div>' : '') + '</div>' + (rightHtml || '') + '</div></div>';
   }
 };
+
+// Material Symbols are the primary icon set. The existing inline SVGs remain
+// as a local fallback so the PWA keeps readable icons when first opened offline.
+const MATERIAL_ICONS = {
+  home: 'home', book: 'menu_book', box: 'inventory_2', receipt: 'receipt_long', more: 'more_horiz',
+  plus: 'add', minus: 'remove', search: 'search', bell: 'notifications', alert: 'warning', user: 'person',
+  users: 'groups', phone: 'call', cash: 'payments', wallet: 'account_balance_wallet', download: 'download',
+  upload: 'upload', cloud: 'cloud', sliders: 'tune', lock: 'lock', finger: 'fingerprint', printer: 'print',
+  share: 'share', trash: 'delete', edit: 'edit', back: 'arrow_back', check: 'check', x: 'close', sun: 'light_mode',
+  moon: 'dark_mode', cart: 'shopping_cart', undo: 'undo', percent: 'percent', calendar: 'calendar_month', chat: 'chat',
+  chart: 'bar_chart', logout: 'logout', shield: 'shield', sync: 'sync', install: 'install_mobile', chevR: 'chevron_right',
+  chevL: 'chevron_left', arrowUp: 'arrow_upward', arrowDown: 'arrow_downward', zap: 'bolt', key: 'key', tag: 'sell',
+  clock: 'schedule', wifiOff: 'wifi_off', camera: 'photo_camera', save: 'save', eye: 'visibility', archive: 'archive',
+  clipboard: 'assignment', globe: 'language'
+};
+
+if (document.fonts && document.fonts.load) {
+  document.fonts.load('24px "Material Symbols Rounded"')
+    .then(() => document.documentElement.classList.add('material-font-ready'))
+    .catch(() => {});
+}

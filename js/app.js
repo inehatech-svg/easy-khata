@@ -4,6 +4,7 @@ const App = {
   installEvt: null,
   lastAct: Date.now(),
   locked: false,
+  brandColor: '',
 
   defaults() {
     return {
@@ -11,6 +12,7 @@ const App = {
       shopName: 'My Shop', shopPhone: '', shopAddress: '',
       currency: '\u20A8', theme: 'light',
       lowStockDefault: 5, autoAdvance: true,
+      invoicePrefix: 'INV-', invoiceFooter: '', paperSize: 'A4', language: 'en', defaultCreditDays: 0, negativeStockMode: 'warn', minReminderGapDays: 3,
       autoLockMin: 0, notify: false,
       seq: 1, driveClient: '', driveAuto: false,
       lastBackupAt: '', lastDriveBackup: '',
@@ -25,10 +27,15 @@ const App = {
     if (saved && saved.key) App.s.key = 'app';
 
     document.documentElement.setAttribute('data-theme', App.s.theme || 'light');
+    App.applyLanguage();
+    await App.applyWebsiteTheme();
 
     const u = await Auth.restoreSession();
     if (u && !localStorage.getItem('sk_locked')) App.showMain();
-    else Auth.renderAuth();
+    else {
+      Auth.renderAuth();
+      if (App.brandColor) App.applyBrandColor(App.brandColor);
+    }
 
     window.addEventListener('hashchange', App.render);
     if (location.protocol === 'http:' || location.protocol === 'https:') {
@@ -48,6 +55,54 @@ const App = {
     }
   },
 
+  applyLanguage() {
+    const language = App.s && App.s.language === 'ur' ? 'ur' : 'en';
+    if (typeof I18n !== 'undefined') I18n.setLanguage(language);
+    else {
+      document.documentElement.lang = language;
+      document.documentElement.dir = language === 'ur' ? 'rtl' : 'ltr';
+      document.documentElement.classList.toggle('rtl', language === 'ur');
+    }
+  },
+
+  async applyWebsiteTheme() {
+    let data = null;
+    try {
+      const response = await fetch('/api/content', { cache: 'no-cache' });
+      if (response.ok) data = await response.json();
+    } catch (e) {}
+    if (!data) {
+      try { data = JSON.parse(localStorage.getItem('solis_inverters_data') || 'null'); } catch (e) {}
+    }
+    if (!data && typeof DEFAULT_SOLIS_DATA !== 'undefined') data = DEFAULT_SOLIS_DATA;
+    const color = data?.company?.primaryColor;
+    if (/^#[0-9a-f]{6}$/i.test(color || '')) {
+      App.applyBrandColor(color);
+    }
+  },
+
+  applyBrandColor(color) {
+    if (!/^#[0-9a-f]{6}$/i.test(color || '')) return;
+    App.brandColor = color;
+    document.documentElement.style.setProperty('--app-brand', color);
+    const softBg = App.s?.theme === 'dark' ? '#101a2e' : 'white';
+    const tint = App.s?.theme === 'dark' ? 24 : 11;
+    document.documentElement.style.setProperty('--priSoft', `color-mix(in srgb, ${color} ${tint}%, ${softBg})`);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+    document.querySelectorAll('#mainView [style], #authView [style]').forEach(el => {
+      if (el.style.cssText && /#(?:f15a29|d94f1e)/i.test(el.style.cssText)) {
+        el.style.cssText = el.style.cssText.replace(/#(?:f15a29|d94f1e)/gi, color);
+      }
+    });
+  },
+
+  async setLanguage(language) {
+    App.s.language = language === 'ur' ? 'ur' : 'en';
+    App.applyLanguage();
+    await App.saveSettings();
+    await App.rerender();
+  },
+
   /* ---------- view switching ---------- */
   viewMode(which) {
     const auth = U.q('#authView'), main = U.q('#mainView');
@@ -65,6 +120,7 @@ const App = {
   showAuth() {
     App.viewMode('auth');
     Auth.renderAuth();
+    if (App.brandColor) App.applyBrandColor(App.brandColor);
   },
 
   lock() {
@@ -112,7 +168,10 @@ const App = {
         case 'bills': html = await Invoices.list(); binder = () => Invoices.bind(params); break;
         case 'bill': html = await Invoices.view(params.id); break;
         case 'bform': html = await Invoices.form(params); binder = () => Invoices.bindForm(params); break;
-        case 'settings': html = await SettingsPage.page(); break;
+        case 'reports': html = await Reports.page(params); break;
+        case 'orders': html = await KhataWebAdmin.ordersPage(); break;
+        case 'webadmin': App.nav('settings?tab=website', true); return;
+        case 'settings': html = await SettingsPage.page(params); binder = () => SettingsPage.bind(params); break;
         case 'import': html = await Importer.page(); break;
         default: App.nav('home', true); return;
       }
@@ -122,10 +181,13 @@ const App = {
         UI.empty('alert', 'Something went wrong', e.message || String(e)) + '</div></div>';
     }
     U.q('#view').innerHTML = html;
+    if (typeof I18n !== 'undefined') I18n.apply(U.q('#view'));
     window.scrollTo(0, 0);
     App.renderTabbar(name);
     App.updateFab(name);
     App.updateBadges();
+    if (App.brandColor) App.applyBrandColor(App.brandColor);
+    if (typeof I18n !== 'undefined') I18n.apply(document.getElementById('mainView'));
     if (binder) binder();
   },
 
@@ -137,11 +199,13 @@ const App = {
     ['khata', 'book', 'Khata'],
     ['stock', 'box', 'Stock'],
     ['bills', 'receipt', 'Bills'],
+    ['orders', 'clipboard', 'Orders'],
+    ['reports', 'chart', 'Reports'],
     ['settings', 'more', 'More']
   ],
 
   tabOf(name) {
-    return { home: 'home', khata: 'khata', person: 'khata', stock: 'stock', item: 'stock', bills: 'bills', bill: 'bills', bform: 'bills', settings: 'settings', import: 'settings' }[name] || '';
+    return { home: 'home', khata: 'khata', person: 'khata', stock: 'stock', item: 'stock', bills: 'bills', bill: 'bills', bform: 'bills', reports: 'reports', orders: 'orders', settings: 'settings', import: 'settings', webadmin: 'settings' }[name] || '';
   },
 
   renderTabbar(active) {
@@ -155,16 +219,17 @@ const App = {
     // desktop top navbar
     const nav = U.q('#dnav');
     if (nav) {
-      const labels = { home: 'Home', khata: 'Khata', stock: 'Stock', bills: 'Bills', settings: 'More' };
+      const labels = { home: 'Home', khata: 'Khata', stock: 'Stock', bills: 'Bills', reports: 'Reports', orders: 'Orders', settings: 'Settings' };
       nav.innerHTML =
-        '<div class="d-brand"><span class="d-logo">' + UI.icon('zap', 18) + '</span>Easy Khata' +
-        '<span class="d-shop">' + U.esc(App.s.shopName || '') + '</span></div>' +
+        '<div class="d-brand" onclick="window.open(\'/\', \'_blank\')" style="cursor:pointer;" title="Click to view Solis Pakistan website"><span class="d-logo">' + UI.icon('zap', 18) + '</span>Easy Khata' +
+        '<span class="d-shop">' + U.esc(App.s.shopName || 'Solis Karachi') + '</span></div>' +
         '<div class="d-links">' + App.tabs.map(t =>
           '<button class="d-link ' + (on === t[0] ? 'on' : '') + '" onclick="App.nav(\'' + t[0] + '\')">' +
           UI.icon(t[1], 16) + labels[t[0]] +
           (t[0] === 'stock' ? ' <span class="d-badge" id="dnavStockBadge" hidden></span>' : '') +
           '</button>').join('') + '</div>' +
         '<div class="d-actions">' +
+        '<a href="/" target="_blank" class="ph-btn" style="color:#F15A29; border-color:rgba(241,90,41,0.3); background:rgba(241,90,41,0.1); text-decoration:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="View Live Website">' + UI.icon('globe', 15) + ' Live Site</a>' +
         '<button class="ph-btn" style="color:var(--muted);border-color:var(--line);background:var(--field)" onclick="App.toggleTheme()" title="Theme">' + UI.icon(App.s.theme === 'dark' ? 'sun' : 'moon', 17) + '</button>' +
         '<button class="ph-btn" style="color:var(--muted);border-color:var(--line);background:var(--field)" onclick="App.lock()" title="Lock">' + UI.icon('lock', 17) + '</button>' +
         '</div>';
@@ -207,6 +272,7 @@ const App = {
   async toggleTheme() {
     App.s.theme = App.s.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', App.s.theme);
+    if (App.brandColor) App.applyBrandColor(App.brandColor);
     await App.saveSettings();
     App.rerender();
   },

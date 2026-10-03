@@ -53,9 +53,10 @@ const U = {
 
   money(n) {
     const sym = (window.App && App.s && App.s.currency) || '\u20A8';
-    const loc = sym === '\u20B9' ? 'en-IN' : 'en-US';
-    const v = Math.abs(U.num(n));
-    const s = v.toLocaleString(loc, { maximumFractionDigits: 2 });
+    const value = typeof Finance !== 'undefined' ? Finance.major(Finance.minor(n)) : Math.round(U.num(n) * 100) / 100;
+    const loc = sym === '\u20B9' ? 'en-IN' : 'en-PK';
+    const v = Math.abs(value);
+    const s = v.toLocaleString(loc, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     return (n < 0 ? '-' : '') + sym + s;
   },
 
@@ -69,7 +70,16 @@ const U = {
   },
 
   sumType(entries, types) {
-    return U.sum(entries.filter(e => types.includes(e.type)), e => e.amount);
+    const values = entries.filter(e => types.includes(e.type)).map(e => e.amount);
+    return typeof Finance !== 'undefined' ? Finance.major(Finance.sum(values)) : U.sum(values);
+  },
+
+  moneyAdd(...values) {
+    return typeof Finance !== 'undefined' ? Finance.add(...values) : values.reduce((sum, value) => sum + U.num(value), 0);
+  },
+
+  moneyMul(quantity, unitPrice) {
+    return typeof Finance !== 'undefined' ? Finance.multiply(quantity, unitPrice) : Math.round(U.num(quantity) * U.num(unitPrice) * 100) / 100;
   },
 
   initials(name) {

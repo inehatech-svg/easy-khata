@@ -2,12 +2,14 @@
 const Stock = {
   search: '',
   cat: 'all',
+  saving: false,
 
   async page() {
     const items = await DB.all('items');
     const active = items.filter(i => !i.archived);
     const cats = Array.from(new Set(active.map(i => (i.category || 'Uncategorized').trim()).filter(Boolean))).sort();
-    const value = U.sum(active, i => i.qty * i.costPrice);
+    const value = U.sum(active, i => U.moneyMul(i.qty, i.avgCost != null ? i.avgCost : i.costPrice));
+    const saleValue = U.sum(active, i => U.moneyMul(i.qty, i.salePrice));
     const low = Stock.lowList(active);
     return '<div class="page">' +
       UI.pageHead('Inventory', active.length + ' items • Stock value ' + U.money(value),
@@ -16,6 +18,8 @@ const Stock = {
       '<div class="stats">' +
       '<div class="stat"><div class="row-between"><span class="s-label">' + UI.icon('box', 15) + ' Items</span></div><div class="s-val">' + active.length + '</div></div>' +
       '<div class="stat"><div class="row-between"><span class="s-label">' + UI.icon('alert', 15) + ' Low stock</span></div><div class="s-val ' + (low.length ? 'red' : '') + '">' + low.length + '</div></div>' +
+      '<div class="stat"><div class="s-label">Stock at cost</div><div class="s-val">' + U.money(value) + '</div></div>' +
+      '<div class="stat"><div class="s-label">Stock at sale price</div><div class="s-val">' + U.money(saleValue) + '</div><div class="tiny muted">Potential margin ' + U.money(Finance.add(saleValue, -value)) + '</div></div>' +
       '</div>' +
       (low.length ? '<div class="alert-card"><div class="row-between"><span class="bold small red">' + UI.icon('bell', 15) + ' Smart stock alarms</span></div>' +
         low.slice(0, 4).map(i =>
@@ -53,6 +57,13 @@ const Stock = {
 
   async lowItems() { return Stock.lowList(await DB.all('items')); },
 
+  async pickStockItem() {
+    const items = (await DB.all('items')).filter(item => !item.archived).sort((a, b) => a.name.localeCompare(b.name));
+    UI.sheet({ title: 'Choose item to stock in', body: items.length
+      ? '<div class="list">' + items.map(item => '<div class="lrow" onclick="U.q(\'.sheet-overlay\').remove();Stock.addStock(\'' + item.id + '\')"><div class="l-main"><div class="l-title">' + U.esc(item.name) + '</div><div class="l-sub">' + U.fmtQty(item.qty) + ' ' + U.esc(item.unit || 'pcs') + ' on hand</div></div>' + UI.icon('chevR', 16) + '</div>').join('') + '</div><button class="btn btn-pri btn-block mt10" onclick="U.q(\'.sheet-overlay\').remove();Stock.itemForm()">' + UI.icon('plus', 16) + ' Add a new inventory item</button>'
+      : UI.empty('box', 'No items yet', 'Create an item first, then receive its stock') + '<button class="btn btn-pri btn-block mt10" onclick="U.q(\'.sheet-overlay\').remove();Stock.itemForm()">' + UI.icon('plus', 16) + ' Create inventory item</button>' });
+  },
+
   itemRow(i) {
     const isLow = U.num(i.qty) <= U.num(i.lowStockAt);
     return '<div class="lrow" onclick="App.nav(\'item?id=' + i.id + '\')">' +
@@ -85,7 +96,7 @@ const Stock = {
 
   /* ---------- item form ---------- */
   itemForm(id) {
-    DB.get('items', id).then(item => {
+    (id ? DB.get('items', id) : Promise.resolve(null)).then(item => {
       const it = item || { lowStockAt: App.s.lowStockDefault, unit: 'pcs' };
       UI.sheet({
         title: item ? 'Edit item' : 'New inventory item',
@@ -97,7 +108,7 @@ const Stock = {
         '</div>' +
         '<div class="field-row">' +
         '<div class="field"><label>Cost price</label><input id="it_cost" inputmode="decimal" value="' + (it.costPrice != null ? it.costPrice : '') + '"></div>' +
-        '<div class="field"><label>Sale price *</label><input id="it_sale" inputmode="decimal" value="' + (it.salePrice != null ? it.salePrice : '') + '"></div>' +
+        '<div class="field"><label>Sale price</label><input id="it_sale" inputmode="decimal" value="' + (it.salePrice != null ? it.salePrice : '') + '"></div>' +
         '</div>' +
         '<div class="field-row">' +
         '<div class="field"><label>Unit</label><input id="it_unit" value="' + U.esc(it.unit || 'pcs') + '" placeholder="pcs"></div>' +
@@ -110,12 +121,22 @@ const Stock = {
   },
 
   async saveItem(id) {
+    if (Stock.saving) return;
+    Stock.saving = true;
+    try { await Stock.saveItemInternal(id); }
+    catch (error) { console.error('Inventory item save failed', error); UI.toast('Could not save inventory item: ' + (error.message || error), 'err'); }
+    finally { Stock.saving = false; }
+  },
+
+  async saveItemInternal(id) {
     const name = U.q('#it_name').value.trim();
     const sale = U.num(U.q('#it_sale').value);
-    if (!name || sale <= 0) return UI.toast('Name and sale price are required', 'err');
+    const cost = U.num(U.q('#it_cost').value);
+    if (!name) return UI.toast('Enter an item name', 'err');
+    if (sale < 0 || cost < 0) return UI.toast('Prices cannot be negative', 'err');
     const patch = {
       name, category: U.q('#it_cat').value.trim() || 'Uncategorized',
-      sku: U.q('#it_sku').value.trim(), costPrice: U.num(U.q('#it_cost').value),
+      sku: U.q('#it_sku').value.trim(), costPrice: cost,
       salePrice: sale, unit: U.q('#it_unit').value.trim() || 'pcs',
       lowStockAt: U.num(U.q('#it_low').value), archived: false
     };
@@ -125,13 +146,17 @@ const Stock = {
       await DB.put('items', it);
       UI.toast('Item updated', 'ok');
     } else {
-      const it = Object.assign({ qty: 0 }, patch);
-      await DB.put('items', it);
       const qty = U.num(U.q('#it_qty').value);
+      if (qty < 0) return UI.toast('Opening stock cannot be negative', 'err');
+      const it = Object.assign({ id: U.uid(), qty: 0 }, patch);
+      const ops = [{ store: 'items', record: it }];
       if (qty > 0) {
-        await Stock.addMove(it.id, 'in', qty, { note: 'Opening stock', unitCost: it.costPrice, day: U.day() });
-        await Stock.recalc(it.id);
+        const move = { id: U.uid(), itemId: it.id, type: 'in', qty, unitCost: cost, note: 'Opening stock', day: U.day(), date: U.nowISO() };
+        const state = Stock.calculateState([move], it);
+        it.qty = state.qty; it.avgCost = state.avgCost;
+        ops.push({ store: 'moves', record: move });
       }
+      await DB.batch(ops);
       UI.toast('Item added', 'ok');
     }
     U.q('.sheet-overlay') && U.q('.sheet-overlay').remove();
@@ -150,7 +175,7 @@ const Stock = {
       '<div class="page-body">' +
       '<div class="card"><div class="stats" style="margin:0">' +
       '<div class="stat" style="box-shadow:none;border:none;padding:0"><div class="s-label">' + UI.icon('box', 15) + ' In stock</div><div class="s-val ' + (isLow ? 'red' : '') + '">' + U.fmtQty(it.qty) + ' <span class="small muted">' + U.esc(it.unit || '') + '</span></div>' + (isLow ? '<span class="chip red mt6">' + UI.icon('bell', 13) + ' Low — alarm at ' + U.fmtQty(it.lowStockAt) + '</span>' : '<span class="chip green mt6">Healthy stock</span>') + '</div>' +
-      '<div class="stat" style="box-shadow:none;border:none;padding:0"><div class="s-label">' + UI.icon('tag', 15) + ' Prices</div><div class="s-val">' + U.money(it.salePrice) + '</div><div class="tiny muted">Cost ' + U.money(it.costPrice) + ' • Value ' + U.money(it.qty * it.costPrice) + '</div></div>' +
+      '<div class="stat" style="box-shadow:none;border:none;padding:0"><div class="s-label">' + UI.icon('tag', 15) + ' Prices</div><div class="s-val">' + U.money(it.salePrice) + '</div><div class="tiny muted">Avg cost ' + U.money(it.avgCost != null ? it.avgCost : it.costPrice) + ' • Value ' + U.money(U.moneyMul(it.qty, it.avgCost != null ? it.avgCost : it.costPrice)) + '</div></div>' +
       '</div>' +
       '<div class="grid3 mt10">' +
       '<button class="btn btn-green btn-sm" onclick="Stock.addStock(\'' + it.id + '\')">' + UI.icon('plus', 15) + ' Add stock</button>' +
@@ -187,36 +212,52 @@ const Stock = {
     await DB.put('moves', {
       itemId, type, qty: Math.abs(U.num(qty)),
       unitCost: o.unitCost || 0, note: o.note || '',
-      refType: o.refType || '', refId: o.refId || '', refNo: o.refNo || '',
+      refType: o.refType || '', refId: o.refId || '', refNo: o.refNo || '', sourceEntryId: o.sourceEntryId || '',
       day: o.day || U.day(), date: U.nowISO()
     });
   },
 
   // qty is recomputed from the full movement log — keeps stock drift-proof
   async recalc(itemId) {
-    const moves = await DB.idx('moves', 'itemId', itemId);
-    let qty = 0;
+    const moves = (await DB.idx('moves', 'itemId', itemId)).sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || ''));
+    const it = await DB.get('items', itemId);
+    const result = Stock.calculateState(moves, it || {});
+    if (it) { it.qty = result.qty; it.avgCost = result.avgCost || U.num(it.costPrice); await DB.put('items', it); }
+    return result.qty;
+  },
+
+  calculateState(moves, item) {
+    let qty = 0, avgCost = 0;
     moves.forEach(m => {
       if (m.type === 'out') qty -= U.num(m.qty);
-      else if (m.type === 'adjust') qty += U.num(m.delta != null ? m.delta : m.qty);
-      else qty += U.num(m.qty);
+      else if (m.type === 'adjust') {
+        const delta = U.num(m.delta != null ? m.delta : m.qty);
+        if (delta > 0) avgCost = Finance.weightedAverage(qty, avgCost || item.costPrice || 0, delta, m.unitCost || avgCost || item.costPrice || 0);
+        qty += delta;
+      } else {
+        const addQty = U.num(m.qty);
+        if (addQty > 0) avgCost = Finance.weightedAverage(qty, avgCost || item.costPrice || 0, addQty, m.unitCost || avgCost || item.costPrice || 0);
+        qty += addQty;
+      }
     });
-    const it = await DB.get('items', itemId);
-    if (it) { it.qty = qty; await DB.put('items', it); }
-    return qty;
+    return { qty, avgCost: avgCost || U.num(item.costPrice) };
   },
 
   async recalcMany(ids) {
     for (const id of Array.from(new Set(ids))) await Stock.recalc(id);
   },
 
-  addStock(id) {
+  async addStock(id) {
+    const suppliers = (await DB.all('customers')).filter(party => party.isSupplier);
     UI.sheet({
       title: 'Add stock (purchase)',
       body:
       '<div class="field"><label>Quantity *</label><input id="ms_qty" inputmode="decimal" placeholder="e.g. 10"></div>' +
       '<div class="field"><label>Unit cost (purchase price)</label><input id="ms_cost" inputmode="decimal" placeholder="per unit"></div>' +
-      '<div class="field"><label>Note</label><input id="ms_note" placeholder="e.g. supplier, bill no."></div>' +
+      '<div class="field"><label>Supplier</label><select id="ms_supplier"><option value="">No supplier</option>' + suppliers.map(s => '<option value="' + s.id + '">' + U.esc(s.name) + '</option>').join('') + '</select></div>' +
+      '<div class="field-row"><div class="field"><label>Bill no.</label><input id="ms_bill" placeholder="optional"></div><div class="field"><label>Paid now</label><input id="ms_paid" inputmode="decimal" value="0"></div></div>' +
+      '<div class="field"><label>Date</label><input id="ms_day" type="date" value="' + U.day() + '"></div>' +
+      '<div class="field"><label>Note</label><input id="ms_note" placeholder="optional"></div>' +
       '<button class="btn btn-green btn-block" onclick="Stock.saveMove(\'' + id + '\',\'in\')">' + UI.icon('plus', 17) + ' Add to inventory</button>'
     });
   },
@@ -232,15 +273,53 @@ const Stock = {
   },
 
   async saveMove(id, type) {
-    const raw = U.q('#ms_qty').value;
+    if (Stock.saving) return;
+    Stock.saving = true;
+    try { await Stock.saveMoveInternal(id, type); }
+    catch (error) {
+      console.error('Stock movement failed', error);
+      UI.toast('Could not save stock: ' + (error.message || error), 'err');
+    } finally { Stock.saving = false; }
+  },
+
+  async saveMoveInternal(id, type) {
+    const qtyField = U.q('#ms_qty');
+    if (!qtyField) return UI.toast('Stock form expired. Reopen it and try again.', 'err');
+    const raw = qtyField.value;
     const qty = U.num(raw);
     if (!qty && type === 'in') return UI.toast('Enter a quantity', 'err');
     if (!qty) return UI.toast('Enter a non-zero change', 'err');
     const it = await DB.get('items', id);
+    if (!it) return UI.toast('This inventory item no longer exists.', 'err');
     if (type === 'in') {
-      const cost = U.num(U.q('#ms_cost').value);
-      await Stock.addMove(id, 'in', qty, { note: U.q('#ms_note').value.trim() || 'Purchase', unitCost: cost });
-      if (cost > 0) { it.costPrice = cost; await DB.put('items', it); }
+      const cost = U.num(U.q('#ms_cost') && U.q('#ms_cost').value);
+      if (cost < 0) return UI.toast('Unit cost cannot be negative', 'err');
+      const amount = Finance.multiply(qty, cost), paid = Finance.major(Finance.minor(U.q('#ms_paid') && U.q('#ms_paid').value));
+      if (paid < 0 || paid > amount) return UI.toast('Paid now must be between zero and the purchase total', 'err');
+      const supplierId = U.q('#ms_supplier') ? U.q('#ms_supplier').value : '', supplier = supplierId ? await DB.get('customers', supplierId) : null;
+      const day = (U.q('#ms_day') && U.q('#ms_day').value) || U.day(), billNo = (U.q('#ms_bill') && U.q('#ms_bill').value.trim()) || '', note = (U.q('#ms_note') && U.q('#ms_note').value.trim()) || '';
+      const refId = U.uid(), move = {
+        id: U.uid(), itemId: id, type: 'in', qty: Math.abs(qty), unitCost: cost, supplierId,
+        billNo, note: note || 'Purchase', refType: 'purchase', refId, refNo: billNo, day,
+        date: new Date(day + 'T12:00:00').toISOString()
+      };
+      const priorMoves = await DB.idx('moves', 'itemId', id);
+      const state = Stock.calculateState(priorMoves.concat(move).sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || '')), it);
+      it.qty = state.qty; it.avgCost = state.avgCost;
+      if (cost > 0) it.costPrice = cost;
+      const ops = [{ store: 'moves', record: move }, { store: 'items', record: it }];
+      if (supplier && amount > 0) {
+        ops.push({ store: 'entries', record: {
+          customerId: supplier.id, customerName: supplier.name, type: 'purchase', amount,
+          day, date: new Date(day + 'T12:00:00').toISOString(), itemId: id, itemName: it.name,
+          billNo, refId, note: 'Purchase ' + (billNo || 'stock') + ' · ' + it.name
+        } });
+        if (paid > 0) ops.push({ store: 'entries', record: {
+          customerId: supplier.id, customerName: supplier.name, type: 'supplier_payment', amount: paid,
+          day, date: new Date(day + 'T12:00:00').toISOString(), billNo, refId, note: 'Paid on purchase ' + (billNo || '')
+        } });
+      } else if (paid > 0) return UI.toast('Select a supplier to record payment against this purchase', 'err');
+      await DB.batch(ops);
     } else {
       await DB.put('moves', {
         itemId: id, type: 'adjust', qty: Math.abs(qty), delta: qty,

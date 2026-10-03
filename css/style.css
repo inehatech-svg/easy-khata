@@ -1,4 +1,4 @@
-/* ============ Solar Khata design system ============ */
+﻿/* ============ Solar Khata design system ============ */
 :root {
   --bg: #f2f4f8;
   --card: #ffffff;
@@ -6,9 +6,9 @@
   --text: #0f172a;
   --muted: #64748b;
   --line: #e3e8ef;
-  --pri: #1e40af;
-  --pri2: #2563eb;
-  --priSoft: #e4ecfd;
+  --pri: var(--app-brand, #d94f1e);
+  --pri2: var(--app-brand, #f15a29);
+  --priSoft: #fff1eb;
   --onPri: #ffffff;
   --amber: #b45309;
   --amberSoft: #fdf1df;
@@ -29,9 +29,9 @@
   --text: #e5eaf3;
   --muted: #8b95a9;
   --line: #1d2941;
-  --pri: #8fafff;
-  --pri2: #b3c7ff;
-  --priSoft: #182747;
+  --pri: var(--app-brand, #ff9a75);
+  --pri2: var(--app-brand, #ffb091);
+  --priSoft: #3a2019;
   --onPri: #0b1120;
   --amber: #fbbf24;
   --amberSoft: #32260e;
@@ -145,7 +145,7 @@ svg { flex: none; vertical-align: middle; }
   cursor: pointer; transition: transform .06s ease, opacity .15s; user-select: none;
 }
 .btn:active { transform: scale(.97); }
-.btn-pri { background: linear-gradient(130deg, #1e40af, #2563eb); color: #fff; border: none; box-shadow: 0 8px 18px -10px rgba(30,64,175,.55); }
+.btn-pri { background: linear-gradient(130deg, var(--pri), var(--pri2)); color: #fff; border: none; box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--pri) 48%, transparent); }
 [data-theme="dark"] .btn-pri { color: #0b1220; }
 .btn-danger { background: var(--redSoft); color: var(--red); border-color: transparent; }
 .btn-green { background: var(--greenSoft); color: var(--green); border-color: transparent; }
@@ -308,12 +308,22 @@ svg { flex: none; vertical-align: middle; }
 .kv.total { border-top: 1.5px dashed var(--line); margin-top: 5px; padding-top: 9px; font-size: 15.5px; }
 
 /* ============ auth ============ */
-.auth-wrap { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
-.auth-logo { width: 84px; height: 84px; border-radius: 24px; background: linear-gradient(130deg, #1e40af, #2563eb); display: flex; align-items: center; justify-content: center; color: #fff; margin: 0 auto 16px; box-shadow: 0 18px 36px -14px rgba(30,64,175,.55); }
-.auth-title { text-align: center; font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
-.auth-sub { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0 26px; }
-.auth-card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 20px 18px; }
-.auth-foot { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 18px; }
+#authView { min-height:100dvh; background:radial-gradient(ellipse at 15% 12%,color-mix(in srgb,var(--app-brand,#f15a29) 27%,transparent),transparent 34%),radial-gradient(ellipse at 88% 82%,rgba(23,142,154,.22),transparent 32%),linear-gradient(145deg,#101b2c 0%,#17283a 52%,#0e1928 100%); }
+.auth-wrap { width:min(100%,520px); min-height:100dvh; display:flex; flex-direction:column; justify-content:center; margin:0 auto; padding:36px 22px calc(32px + env(safe-area-inset-bottom)); }
+.auth-logo { width:76px; height:76px; border-radius:23px; background:linear-gradient(135deg,var(--pri),var(--pri2)); display:flex; align-items:center; justify-content:center; color:#fff; margin:0 auto 15px; box-shadow:0 15px 38px color-mix(in srgb,var(--pri) 32%,transparent); }
+.auth-title { text-align:center; color:#fff; font-size:28px; font-weight:800; letter-spacing:-.7px; }
+.auth-sub { text-align:center; color:rgba(255,255,255,.7); font-size:13px; margin:7px 0 23px; }
+.auth-card { background:rgba(255,255,255,.97); border:1px solid rgba(255,255,255,.55); border-radius:22px; box-shadow:0 24px 75px rgba(0,0,0,.28); padding:22px; }
+.auth-choice { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:5px; margin-bottom:19px; border-radius:13px; background:#f1f4f8; }
+.auth-choice button { min-height:42px; border:0; border-radius:10px; background:transparent; color:#526174; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.auth-choice button.on { background:#fff; color:var(--pri); box-shadow:0 2px 9px rgba(20,35,50,.12); }
+.auth-form-intro { display:flex; flex-direction:column; gap:4px; margin:4px 0 17px; }
+.auth-form-intro b { color:#172334; font-size:17px; }
+.auth-form-intro span,.auth-message { color:#657386; font-size:12px; line-height:1.55; }
+.auth-message { padding:17px; border-radius:12px; background:#f5f7fa; }
+.auth-message b { color:#172334; }
+.auth-foot { text-align:center; font-size:11.5px; color:rgba(255,255,255,.63); margin-top:18px; }
+.auth-foot span { padding:0 5px; color:var(--pri2); }
 .pin-dots { display: flex; gap: 10px; justify-content: center; margin: 14px 0; }
 .pin-dots span { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--muted); }
 .pin-dots span.fill { background: var(--pri); border-color: var(--pri); }
@@ -348,27 +358,114 @@ svg { flex: none; vertical-align: middle; }
 
 /* ============ print ============ */
 #printArea { display: none; }
+@page { size: A4 portrait; margin: 15mm; }
+@page invoiceA4 { size: A4 portrait; margin: 12mm 14mm; }
+@page receipt80 { size: auto; margin: 3mm; }
+@page receipt58 { size: auto; margin: 2mm; }
 @media print {
   body > *:not(#printArea) { display: none !important; }
   #printArea { display: block; }
-  body { background: #fff; }
+  html, body { width: 100%; min-height: 0; margin: 0; padding: 0; background: #fff; }
 }
-.print-doc { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #111; padding: 24px; max-width: 720px; margin: 0 auto; font-size: 13px; }
-.print-doc .p-shop { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #111; padding-bottom: 12px; }
-.print-doc h1 { margin: 0; font-size: 22px; letter-spacing: -.5px; }
-.print-doc .p-inv { text-align: right; }
-.print-doc .p-inv .no { font-size: 17px; font-weight: 800; }
-.print-doc table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-.print-doc th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #555; border-bottom: 1.5px solid #111; padding: 7px 6px; }
-.print-doc td { padding: 8px 6px; border-bottom: 1px solid #ddd; }
-.print-doc .num { text-align: right; }
-.print-doc .p-totals { margin-top: 14px; margin-left: auto; width: 260px; }
-.print-doc .p-totals .kv { padding: 4px 0; }
-.print-doc .p-totals .kv.total { border-top: 2px solid #111; font-weight: 800; font-size: 15px; }
-.print-doc .p-foot { margin-top: 26px; text-align: center; color: #666; font-size: 11px; border-top: 1px solid #ddd; padding-top: 10px; }
-.print-doc .p-status { display: inline-block; padding: 3px 12px; border: 2px solid; border-radius: 6px; font-weight: 800; font-size: 12px; margin-top: 6px; }
+.print-doc { font-family: Arial, "Segoe UI", sans-serif; color: #172334; background: #fff; padding: 24px; max-width: 720px; margin: 0 auto; font-size: 12px; line-height: 1.45; }
+.print-doc .p-print-header { display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:2px solid #172334; padding:0 0 12px; }
+.print-doc .p-brand { display:flex; align-items:center; gap:12px; min-width:0; }
+.print-doc .p-logo { display:block; max-width:142px; max-height:62px; object-fit:contain; }
+.print-doc .p-logo-fallback { display:flex; width:44px; height:44px; flex:none; align-items:center; justify-content:center; border-radius:12px; background:#fff1eb; }
+.print-doc .p-logo-fallback svg { width:36px; height:36px; fill:#f15a29; stroke:#f15a29; stroke-width:3; stroke-linecap:round; }
+.print-doc h1 { margin:0 0 3px; font-size:21px; line-height:1.15; letter-spacing:-.3px; }
+.print-doc .p-mut { color:#526174; font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
+.print-doc .p-inv { min-width:120px; text-align:right; }
+.print-doc .p-kicker,.print-doc .p-section-label { color:#64748b; font-size:9px; font-weight:800; letter-spacing:1.1px; }
+.print-doc .p-inv .no { font-size:16px; font-weight:800; }
+.print-doc .p-status { display:inline-block; margin-top:4px; padding:2px 8px; border:1px solid currentColor; border-radius:999px; font-size:8px; font-weight:800; letter-spacing:.5px; }
+.print-doc .p-status.paid { color:#047857; background:#ecfdf5; }
+.print-doc .p-status.overdue { color:#b91c1c; background:#fef2f2; }
+.print-doc .p-status.due { color:#b45309; background:#fff7ed; }
+.print-doc .p-status.partial { color:#1d4ed8; background:#eff6ff; }
+.print-doc .p-status.returned { color:#475569; background:#f1f5f9; }
+.print-doc .p-content { min-height:1px; }
+.print-doc .p-billto { margin:16px 0 14px; padding:10px 12px; border:1px solid #e2e8f0; border-left:3px solid #f15a29; border-radius:6px; background:#f8fafc; break-inside:avoid; }
+.print-doc .p-section-label { margin-bottom:4px; }
+.print-doc .p-due-date { margin-top:5px; color:#b45309; }
+.print-doc table { width:100%; border-collapse:collapse; margin-top:12px; table-layout:fixed; }
+.print-doc thead { display:table-header-group; }
+.print-doc tr,.print-doc img { break-inside:avoid; page-break-inside:avoid; }
+.print-doc th { text-align:left; color:#fff; background:#172334; font-size:9px; text-transform:uppercase; letter-spacing:.35px; padding:8px 7px; }
+.print-doc td { padding:8px 7px; border-bottom:1px solid #e2e8f0; vertical-align:top; overflow-wrap:anywhere; }
+.print-doc tbody tr:nth-child(even) { background:#f8fafc; }
+.print-doc .p-index { width:28px; color:#64748b; }
+.print-doc .num { text-align:right; white-space:nowrap; }
+.print-doc .p-totals { margin:14px 0 0 auto; width:min(100%,280px); break-inside:avoid; }
+.print-doc .p-totals .kv { display:flex; justify-content:space-between; gap:14px; padding:4px 0; border-bottom:1px solid #edf0f4; }
+.print-doc .p-totals .kv.total { margin-top:3px; padding:8px 0; border-top:2px solid #172334; border-bottom:0; font-size:15px; font-weight:800; }
+.print-doc .p-totals .p-balance { color:#b91c1c; font-weight:800; }
+.print-doc .p-notes { margin-top:14px; padding:9px 11px; border:1px solid #e2e8f0; border-radius:6px; color:#475569; break-inside:avoid; }
+.print-doc .p-notes b { display:block; margin-bottom:3px; color:#172334; }
+.print-doc .p-print-footer { display:flex; justify-content:space-between; align-items:center; gap:14px; color:#64748b; font-size:9px; }
+.print-doc .p-thanks { max-width:65%; }
+.print-doc .p-powered { display:flex; align-items:center; gap:7px; white-space:nowrap; color:#172334; font-size:9px; font-weight:700; }
+.print-doc .p-powered img { display:block; flex:none; width:14mm; height:14mm; object-fit:contain; }
+.print-doc.print-A4 { page:invoiceA4; display:table; width:100%; max-width:none; margin:0; padding:0; border-collapse:collapse; table-layout:fixed; }
+.print-doc.print-A4 thead { display:table-header-group; }
+.print-doc.print-A4 tfoot { display:table-footer-group; }
+.print-doc.print-A4 .p-print-header-cell,.print-doc.print-A4 .p-footer-cell { padding:0; border:0; background:#fff; color:#172334; text-transform:none; letter-spacing:normal; font-weight:400; }
+.print-doc.print-A4 .p-print-header { position:static; height:auto; margin-bottom:5px; }
+.print-doc.print-A4 .p-print-footer { position:static; height:auto; margin:0; padding-top:5px; border-top:1px solid #cbd5e1; }
+.print-doc.print-A4 tbody > tr > td[colspan="5"] { padding:0; }
+.print-doc.print-A4 .p-index { width:28px; }
+.print-doc.print-A4 .p-content { padding-bottom:2mm; }
+.print-doc.thermal80 { page:receipt80; width:74mm; max-width:74mm; margin:0; padding:0; font-size:9pt; line-height:1.35; font-family:Arial,Helvetica,sans-serif; }
+.print-doc.thermal80,.print-doc.thermal80 * { color:#000 !important; font-weight:700 !important; text-shadow:none !important; -webkit-text-stroke:.12px currentColor; text-rendering:geometricPrecision; }
+.print-doc.thermal58 { page:receipt58; width:54mm; max-width:54mm; margin:0; padding:0; font-size:9px; }
+.print-doc.thermal80 .p-print-header { display:block; padding-bottom:2mm; border-bottom:1px dashed #000; }
+.print-doc.thermal80 .p-brand { gap:2mm; }
+.print-doc.thermal80 .p-logo { max-width:20mm; max-height:12mm; }
+.print-doc.thermal80 h1 { margin:0 0 1mm; font-size:12pt; line-height:1.15; }
+.print-doc.thermal80 .p-mut { font-size:8pt; line-height:1.3; }
+.print-doc.thermal80 .p-inv { margin-top:2mm; text-align:left; }
+.print-doc.thermal80 th.p-print-header-cell { padding:0; border:0; background:#fff !important; color:#000 !important; }
+.print-doc.thermal80 .p-print-header { background:#fff; color:#000; }
+.print-doc.thermal80 .p-kicker,.print-doc.thermal80 .p-section-label { font-size:8pt; letter-spacing:.3px; }
+.print-doc.thermal80 .p-inv .no { font-size:11pt; }
+.print-doc.thermal58 h1 { font-size:13px; }
+.print-doc.thermal80 .p-logo-fallback { width:10mm; height:10mm; border-radius:2mm; }
+.print-doc.thermal80 .p-logo-fallback svg { width:8mm; height:8mm; }
+.print-doc.thermal80 .p-inv .no { display:inline; margin-right:2mm; }
+.print-doc.thermal80 .p-status { margin:0; padding:1px 5px; border-radius:2px; font-size:8pt; }
+.print-doc.thermal80 .p-billto { margin:2mm 0; padding:2mm; border:1px solid #000; border-left:2px solid #000; border-radius:0; background:#fff; }
+.print-doc.thermal80 { border-collapse:collapse; table-layout:fixed; }
+.print-doc.thermal80 table { margin:2mm 0 0; font-size:8.5pt; }
+.print-doc.thermal80 th,.print-doc.thermal80 td { padding:1.2mm 1mm; border-color:#000; }
+.print-doc.thermal80 thead tr:nth-child(2) th { background:#000; color:#fff !important; font-size:8pt; letter-spacing:0; }
+.print-doc.thermal80 .p-index { display:none; }
+.print-doc.thermal80 th:nth-child(3),.print-doc.thermal80 td:nth-child(3) { width:11mm; }
+.print-doc.thermal80 th:nth-child(4),.print-doc.thermal80 td:nth-child(4) { width:17mm; }
+.print-doc.thermal80 th:nth-child(5),.print-doc.thermal80 td:nth-child(5) { width:19mm; }
+.print-doc.thermal58 th:nth-child(4),.print-doc.thermal58 td:nth-child(4) { display:none; }
+.print-doc.thermal58 th:nth-child(5),.print-doc.thermal58 td:nth-child(5) { width:17mm; }
+.print-doc.thermal80 .p-totals { width:100%; margin-top:2mm; }
+.print-doc.thermal80 .p-totals .kv { padding:1mm 0; border-color:#000; }
+.print-doc.thermal80 .p-totals .kv.total { font-size:11pt; border-top:1px solid #000; }
+.print-doc.thermal80 .p-notes { margin-top:2mm; padding:2mm; border-color:#000; border-radius:0; }
+.print-doc.thermal80 .p-print-footer { margin-top:3mm; padding-top:2mm; border-top:1px dashed #000; font-size:8pt; }
+.print-doc.thermal80 .p-powered { font-size:8pt; }
+.print-doc.thermal80 .p-powered img { width:10mm; height:10mm; }
+.print-doc.thermal80 .p-thanks { max-width:58%; }
+@media print {
+  .print-doc { color-adjust:exact; print-color-adjust:exact; }
+  .print-doc.print-A4 thead,.print-doc.print-A4 tfoot { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
 
 /* misc */
+.material-icon { display: none; vertical-align: middle; line-height: 1; font-family: 'Material Symbols Rounded'; font-weight: 400; font-style: normal; white-space: nowrap; direction: ltr; font-feature-settings: 'liga'; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+.rtl { direction: rtl; font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", Tahoma, sans-serif; }
+.rtl input, .rtl textarea { text-align: right; }
+.rtl .l-right, .rtl .e-right { text-align: left; }
+.rtl #view { line-height: 1.65; }
+.material-font-ready .material-icon { display: inline-block; }
+.material-font-ready .icon-fallback { display: none; }
+button .material-icon, button .icon-fallback { flex: none; }
 .offline-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--amber); background: var(--amberSoft); padding: 3px 9px; border-radius: 999px; }
 .num-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
 .num-pad button { padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--field); font-size: 19px; font-weight: 700; cursor: pointer; }
@@ -378,6 +475,8 @@ svg { flex: none; vertical-align: middle; }
 .table-mini th { text-align: left; color: var(--muted); font-size: 11px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .table-mini td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
 .table-mini .num { text-align: right; }
+.app-powered { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; color:var(--muted); font-weight:600; }
+.app-powered img { width:48px; height:48px; object-fit:contain; padding:2px; border-radius:6px; background:#fff; }
 
 /* ============ Google sign-in button ============ */
 .g-btn { background: #ffffff; color: #1f2937; border: 1.5px solid #dadce0; font-weight: 700; gap: 10px; }
@@ -448,3 +547,18 @@ svg { flex: none; vertical-align: middle; }
   .page-body > .section-label { grid-column: 1 / -1; }
   .page-body > .alert-card { grid-column: 1 / -1; }
 }
+
+/* Solis branded, responsive Khata settings and desktop workspace */
+.settings-page-body { display: block !important; max-width: 1400px !important; }
+.settings-page-body > * { grid-column: 1 / -1; }
+.wa-main-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; background:var(--card); padding:6px; border-radius:14px; border:1px solid var(--line); box-shadow:var(--shadow); }
+.d-brand .d-logo { background:linear-gradient(130deg,var(--pri),var(--pri2)); }
+.wa-subtab-nav { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.wa-subtab-btn { white-space:nowrap; }
+@media (max-width:620px) { .wa-subtab-nav { overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; } .settings-page-body .grid2 { grid-template-columns:minmax(0,1fr); } }
+.wa-content-card { padding:18px; }
+.wa-editor-label { display:block; margin:14px 0 7px; font-size:12px; font-weight:700; color:var(--muted); }
+.wa-content-editor { display:block; width:100%; min-height:min(64vh,720px); resize:vertical; padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--field); color:var(--text); font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:2; }
+.wa-editor-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px; }
+.audit-json { max-height:220px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; background:var(--field); border-radius:8px; padding:9px; font-size:10px; color:var(--muted); }
+@media (max-width:620px) { .wa-main-tabs{grid-template-columns:1fr}.wa-editor-actions .btn{flex:1 1 100%}.wa-content-card{padding:14px} }

@@ -2,12 +2,12 @@
   "name": "Easy Khata — Advance Ledger",
   "short_name": "Easy Khata",
   "description": "Offline-first khata, inventory & billing for solar and inverter businesses",
-  "start_url": "./",
+  "start_url": "./khata.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b1220",
-  "theme_color": "#4f46e5",
+  "theme_color": "#f15a29",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }

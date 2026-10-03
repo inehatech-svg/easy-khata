@@ -21,7 +21,20 @@ const Auth = {
     return (h2 >>> 0).toString(16) + (h1 >>> 0).toString(16);
   },
 
-  async users() { return DB.all('users'); },
+  async users() {
+    const users = await DB.all('users');
+    if (users.length && !users.some(user => user.role === 'admin')) {
+      const owner = users.slice().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))[0];
+      if (owner && !owner.role) { owner.role = 'admin'; await DB.put('users', owner); }
+    }
+    return users;
+  },
+
+  async isAdmin(user = Auth.user) {
+    if (!user) return false;
+    const users = await Auth.users();
+    return user.role === 'admin' || (!user.role && users.slice().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))[0]?.id === user.id);
+  },
 
   saveSession(u) {
     Auth.user = u;
@@ -51,12 +64,28 @@ const Auth = {
     App.viewMode('auth');
     const users = await Auth.users();
     const el = U.q('#authView');
-    if (users.length === 0) el.innerHTML = Auth.setupHtml(msg);
-    else {
-      Auth.user = users.find(x => x.id === localStorage.getItem('sk_sess')) || users[0];
-      el.innerHTML = Auth.loginHtml(Auth.user, msg);
-      Auth.buildPinPad();
-    }
+    Auth.user = users.find(x => x.id === localStorage.getItem('sk_sess')) || users[0] || null;
+    el.innerHTML = Auth.authPageHtml(Auth.user, msg, users.length === 0);
+    if (users.length) Auth.buildPinPad();
+  },
+
+  authPageHtml(user, msg, firstAccount) {
+    const mode = firstAccount ? 'signup' : 'login';
+    return '<div class="auth-wrap">' + Auth.logoBlock('A simpler way to manage your shop') +
+      '<div class="auth-card auth-shell">' +
+      (msg ? '<div class="alert-card" style="margin:0 0 12px"><span class="small">' + U.esc(msg) + '</span></div>' : '') +
+      '<div class="auth-choice"><button id="auth_choice_signup" class="' + (mode === 'signup' ? 'on' : '') + '" onclick="Auth.authMode(\'signup\')">Create account</button><button id="auth_choice_login" class="' + (mode === 'login' ? 'on' : '') + '" onclick="Auth.authMode(\'login\')">Log in</button></div>' +
+      '<div id="auth_signup_panel" ' + (mode === 'signup' ? '' : 'hidden') + '>' + (firstAccount ? Auth.setupFieldsHtml() : '<div class="auth-message"><b>Account creation is managed by your administrator.</b><br>Ask the shop owner to create your sub-admin ID and password in Settings.</div>') + '</div>' +
+      '<div id="auth_login_panel" ' + (mode === 'login' ? '' : 'hidden') + '>' + (user ? Auth.loginHtml(user) : '<div class="auth-message">Create the first account to get started.</div>') + '</div>' +
+      '</div><div class="auth-foot">Easy Khata <span>|</span> Secure shop access</div></div>';
+  },
+
+  authMode(mode) {
+    const signup = U.q('#auth_signup_panel'), login = U.q('#auth_login_panel');
+    if (signup) signup.hidden = mode !== 'signup';
+    if (login) login.hidden = mode !== 'login';
+    U.q('#auth_choice_signup')?.classList.toggle('on', mode === 'signup');
+    U.q('#auth_choice_login')?.classList.toggle('on', mode === 'login');
   },
 
   logoBlock(sub) {
@@ -110,11 +139,13 @@ const Auth = {
 
       const users = await DB.all('users');
       let u = users.find(x => (x.googleEmail || '').toLowerCase() === email.toLowerCase());
+      if (!u && users.length) throw new Error('Ask your administrator to create your account first.');
       if (!u) {
         const shop = App.s.shopName && App.s.shopName !== 'My Solar Shop' ? App.s.shopName : 'My Shop';
-        u = { id: U.uid(), username: email.split('@')[0], googleEmail: email, salt: U.uid(), hash: await Auth.sha(U.uid() + U.uid(), U.uid()), createdAt: U.nowISO() };
+        u = { id: U.uid(), username: email.split('@')[0], role: 'admin', googleEmail: email, salt: U.uid(), hash: await Auth.sha(U.uid() + U.uid(), U.uid()), createdAt: U.nowISO() };
         await DB.put('users', u);
-        if (users.length === 0) { App.s.shopName = shop; await App.saveSettings(); }
+        App.s.shopName = shop;
+        await App.saveSettings();
         UI.toast('Account created for ' + email, 'ok');
       }
       Auth.saveSession(u);
@@ -128,47 +159,37 @@ const Auth = {
     }
   },
 
-  setupHtml(msg) {
-    return '<div class="auth-wrap">' + Auth.logoBlock('Create your owner account to get started') +
-      '<div class="auth-card">' +
-      (msg ? '<div class="alert-card" style="margin:0 0 12px"><span class="small">' + U.esc(msg) + '</span></div>' : '') +
+  setupFieldsHtml() {
+    return '<div class="auth-form-intro"><b>Create your owner account</b><span>This is the main administrator account for your shop.</span></div>' +
       '<div class="field"><label>Shop / Business name</label><input id="su_shop" placeholder="e.g. Ali Solar Traders" autocomplete="off"></div>' +
-      '<div class="field"><label>Username</label><input id="su_user" placeholder="owner" autocomplete="off"></div>' +
-      '<div class="field"><label>Password</label><input id="su_pass" type="password" placeholder="Choose a strong password"></div>' +
+      '<div class="field"><label>Username</label><input id="su_user" placeholder="owner" autocomplete="username"></div>' +
+      '<div class="field"><label>Password</label><input id="su_pass" type="password" placeholder="Choose a strong password" autocomplete="new-password"></div>' +
       '<div class="field"><label>Confirm password</label><input id="su_pass2" type="password" placeholder="Repeat password"></div>' +
-      '<div class="field"><label>Quick PIN <span class="muted tiny">(optional — 4 to 6 digits)</span></label><input id="su_pin" inputmode="numeric" maxlength="6" placeholder="e.g. 4821"></div>' +
-      '<button class="btn btn-pri btn-block" onclick="Auth.doSetup()">' + UI.icon('shield', 18) + ' Create account</button>' +
-      Auth.googleBtnHtml('Sign up with Google') +
-      '</div><div class="auth-foot">Data is stored offline on this device. Google login adds automatic cloud backup.</div></div>';
+      '<div class="field"><label>Quick PIN <span class="muted tiny">(optional - 4 to 6 digits)</span></label><input id="su_pin" inputmode="numeric" maxlength="6" placeholder="e.g. 4821"></div>' +
+      '<button class="btn btn-pri btn-block" onclick="Auth.doSetup()">' + UI.icon('shield', 18) + ' Create owner account</button>' + Auth.googleBtnHtml('Sign up with Google');
   },
 
-  loginHtml(user, msg) {
+  loginHtml(user) {
     const hasPin = !!user.pinHash;
     const canBio = Auth.canBiometric();
-    return '<div class="auth-wrap">' + Auth.logoBlock('Welcome back') +
-      '<div class="auth-card">' +
-      (msg ? '<div class="alert-card" style="margin:0 0 12px"><span class="small">' + U.esc(msg) + '</span></div>' : '') +
+    return '<div class="auth-form-intro"><b>Welcome back</b><span>Enter your account ID or username and password.</span></div>' +
       '<div class="segmented" style="margin-bottom:14px">' +
       '<button id="lg_t_pass" class="' + (hasPin ? '' : 'on') + '" onclick="Auth.loginTab(\'pass\')">Password</button>' +
       (hasPin ? '<button id="lg_t_pin" class="on" onclick="Auth.loginTab(\'pin\')">PIN</button>' : '') +
       '</div>' +
-      '<div id="lg_pass" ' + (hasPin ? 'hidden' : '') + '>' +
-      '<div class="field"><label>Username</label><input id="lg_user" value="' + U.esc(user.username) + '" readonly></div>' +
-      '<div class="field"><label>Password</label><input id="lg_pass" type="password" placeholder="Enter password"></div>' +
-      '<button class="btn btn-pri btn-block" onclick="Auth.doLogin()">' + UI.icon('lock', 18) + ' Unlock</button>' +
-      '</div>' +
+      '<div id="lg_password_panel" ' + (hasPin ? 'hidden' : '') + '>' +
+      '<div class="field"><label>Account ID or username</label><input id="lg_user" value="' + U.esc(user.id) + '" autocomplete="username"></div>' +
+      '<div class="field"><label>Password</label><input id="lg_password" type="password" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')Auth.doLogin()"></div>' +
+      '<button class="btn btn-pri btn-block" onclick="Auth.doLogin()">' + UI.icon('lock', 18) + ' Log in securely</button></div>' +
       '<div id="lg_pin" ' + (hasPin ? '' : 'hidden') + '>' +
       '<input id="lg_pinv" inputmode="numeric" maxlength="6" placeholder="Enter PIN" style="position:absolute;opacity:0;pointer-events:none">' +
       '<div class="pin-dots" id="pinDots">' + '<span></span>'.repeat(6) + '</div>' +
-      '<div class="num-pad" id="pinPad"></div>' +
-      '</div>' +
-      (canBio ? '<button class="btn btn-block mt10" onclick="Auth.bioUnlock()">' + UI.icon('finger', 18) + ' Unlock with fingerprint</button>' : '') +
-      Auth.googleBtnHtml() +
-      '</div><div class="auth-foot">Easy Khata v1.1 • Offline-first</div></div>';
+      '<div class="num-pad" id="pinPad"></div></div>' +
+      (canBio ? '<button class="btn btn-block mt10" onclick="Auth.bioUnlock()">' + UI.icon('finger', 18) + ' Unlock with fingerprint</button>' : '') + Auth.googleBtnHtml();
   },
 
   loginTab(which) {
-    U.q('#lg_pass').hidden = which !== 'pass';
+    U.q('#lg_password_panel').hidden = which !== 'pass';
     const pin = U.q('#lg_pin'); if (pin) pin.hidden = which !== 'pin';
     U.q('#lg_t_pass').classList.toggle('on', which === 'pass');
     const t = U.q('#lg_t_pin'); if (t) t.classList.toggle('on', which === 'pin');
@@ -202,6 +223,7 @@ const Auth = {
 
   /* ---------- actions ---------- */
   async doSetup() {
+    if ((await Auth.users()).length) return UI.toast('Ask the administrator to create your account from Settings', 'err');
     const shop = U.q('#su_shop').value.trim();
     const username = U.q('#su_user').value.trim();
     const pass = U.q('#su_pass').value;
@@ -213,7 +235,7 @@ const Auth = {
     if (pin && (pin.length < 4 || pin.length > 6)) return UI.toast('PIN must be 4–6 digits', 'err');
     const salt = U.uid();
     const u = {
-      id: U.uid(), username, salt,
+      id: U.uid(), username, role: 'admin', salt,
       hash: await Auth.sha(pass, salt), createdAt: U.nowISO(), pinLen: pin ? pin.length : 0
     };
     if (pin) { u.pinSalt = U.uid(); u.pinHash = await Auth.sha(pin, u.pinSalt); }
@@ -226,10 +248,13 @@ const Auth = {
   },
 
   async doLogin() {
-    const pass = U.q('#lg_pass').value;
-    const u = Auth.user;
+    const identifier = U.q('#lg_user').value.trim().toLowerCase();
+    const pass = U.q('#lg_password').value;
+    const u = (await Auth.users()).find(account => account.id.toLowerCase() === identifier || account.username.toLowerCase() === identifier);
+    if (!u) { Auth.shake(); return UI.toast('Account ID or username not found', 'err'); }
     const hash = await Auth.sha(pass, u.salt);
     if (hash !== u.hash) { Auth.shake(); return UI.toast('Wrong password', 'err'); }
+    Auth.user = u;
     Auth.saveSession(u);
     App.showMain();
   },
